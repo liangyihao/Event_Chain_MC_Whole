@@ -37,6 +37,8 @@ double Ewald_Sum::Potential(double4 X,double4 Y){
 double Ewald_Sum::Self_E(double4 X){
     double res=0;
     double dx,dy,dz,dr;
+    double L;
+    L=min(min(Lx,Ly),Lz);
     for(int nx=-cut_off_n;nx<=cut_off_n;nx++){
         dx=nx*Lx;
         for(int ny=-cut_off_n;ny<=cut_off_n;ny++){
@@ -44,7 +46,7 @@ double Ewald_Sum::Self_E(double4 X){
             for(int nz=-cut_off_n;nz<=cut_off_n;nz++){
                 dz=nz*Lz;
                 dr=sqrt(dx*dx+dy*dy+dz*dz);
-                if(dr<1E-20)continue;
+                if(dr<EPSILON*L)continue;
                 res+=erfc(alpha*dr)/dr;
             }
         }
@@ -163,7 +165,8 @@ void Ewald_Sum::Reset(double Lx,double Ly,double Lz,double accuracy){
 /*
 double Ewald_Sum::D_Potential_Check(double4 X,double4 Y,int axis){
         double4 XX;
-        double ep=1E-9;
+        double L=min(min(Lx,Ly),Lz);
+        double ep=10*EPSILON*L;
         double epsilon;
         XX=X;
         int sign;
@@ -217,19 +220,19 @@ double Ewald_Sum::Event_Time_Colomb(double4 X1,double4 X2,int axis_index,double 
 		x_dir_pointer=&(Y_active.x);
 		L=Lx;
 		d2_min=(Y_active.y)*(Y_active.y)+(Y_active.z)*(Y_active.z);
-        if(abs(d2_min)<(1E-30)*L)Y_active.y=(1E-30)*L;
+        if(d2_min<EPSILON*EPSILON*L*L)Y_active.y=(1E-30)*L;
 	}
 	if(abs(axis_index)==2){
 		x_dir_pointer=&(Y_active.y);
 		L=Ly;
 		d2_min=(Y_active.z)*(Y_active.z)+(Y_active.x)*(Y_active.x);
-        if(abs(d2_min)<(1E-30)*L)Y_active.z=(1E-30)*L;
+        if(d2_min<EPSILON*EPSILON*L*L)Y_active.z=(1E-30)*L;
 	}
 	if(abs(axis_index)==3){
 		x_dir_pointer=&(Y_active.z);
 		L=Lz;
 		d2_min=(Y_active.x)*(Y_active.x)+(Y_active.y)*(Y_active.y);
-        if(abs(d2_min)<(1E-30)*L)Y_active.x=(1E-30)*L;
+        if(d2_min<EPSILON*EPSILON*L*L)Y_active.x=(1E-30)*L;
 	}
 
 	(*x_dir_pointer)=(*x_dir_pointer)*sign;
@@ -327,9 +330,6 @@ double Ewald_Sum::Event_Time_Colomb(double4 X1,double4 X2,int axis_index,double 
             }
     }
     if(q>Q_right)return 2*L;
-
-    //cout<<"s=["<<s_left<<","<<s_right<<']'<<endl;
-    //cout<<"Q:"<<Q_left<<","<<Q_right<<endl;
         
     //Find solution
     double s_mid,Q_mid;
@@ -340,9 +340,8 @@ double Ewald_Sum::Event_Time_Colomb(double4 X1,double4 X2,int axis_index,double 
     Q_left0=Q_left;
     Potential_Left0=Potential_Left;
 
-    while((abs(Q_right-Q_left)>(accuracy*Bjerrum_Length/L))&&(abs(s_right-s_left)>EPSILON*L)) {
-        //cout<<"s=["<<s_left<<","<<s_right<<']'<<endl;
-        //cout<<"Q:"<<Q_left<<","<<Q_right<<endl;
+//    while((abs(Q_right-Q_left)>(accuracy*Bjerrum_Length/L))&&(abs(s_right-s_left)>EPSILON*L)) {
+    while(abs(s_right-s_left)>EPSILON*L) {
         if(s_left>Max_Event_T)return 2*L;//This trick is for saving time
         s_mid=(s_left+s_right)/2;
         (*x_dir_pointer)=x_dir0+s_mid;
@@ -359,7 +358,5 @@ double Ewald_Sum::Event_Time_Colomb(double4 X1,double4 X2,int axis_index,double 
             Potential_Left=Potential_Mid;
         }
     }
-
     return s_mid;
-
 }

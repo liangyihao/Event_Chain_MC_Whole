@@ -121,13 +121,7 @@ double Event_Time_Spring(double4 X1,double4 X2,int axis_index,double*Params, dou
 
     double q;
     q=-log(1-Uniform_Random());
-    /*
-    q=Uniform_Random();
-    if(q==0)
-        return 2*Lxx;
-    else
-        q=-log(q);
-    */
+
     double s1,s2;
     double dr_1,dr_2;
     double q1,q2;
@@ -178,7 +172,8 @@ double Event_Time_Spring(double4 X1,double4 X2,int axis_index,double*Params, dou
     s10=s1;q10=q1;dr_10=dr_1;
     double bas;
     bas=q10-0.5*K*(dr_10-l0)*(dr_10-l0);
-    while((abs(q2-q1)>1E-10)||(abs(s2-s1)>1E-10)) {
+//    while((abs(q2-q1)>1E-10)||(abs(s2-s1)>1E-10)) {
+    while(abs(s2-s1)>EPSILON*Lxx) {
         if(s1>Max_Event_T)return 2*Lxx;//This trick is for saving time
         sm=(s1+s2)/2;
         dr_m=sqrt((dxx-sm)*(dxx-sm)+min_dr2);
