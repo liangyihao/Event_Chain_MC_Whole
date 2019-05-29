@@ -1,4 +1,9 @@
 /*
+Author: Yihao Liang
+liangyihaosjtu@gmail.com
+This code is for Event Chain Monte Carlo for pairwise interacting many body system
+*/
+/*
 In this file, we define the event time routines for basic pairwise interactions
 */
 #include <vector>

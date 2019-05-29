@@ -1,5 +1,10 @@
 /*
-Used to manage systematic variables
+Author: Yihao Liang
+liangyihaosjtu@gmail.com
+This code is for Event Chain Monte Carlo for pairwise interacting many body system
+*/
+/*
+Used to manage system variables
 */
 
 #ifndef MANAGE

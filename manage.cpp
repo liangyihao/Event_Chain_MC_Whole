@@ -1,3 +1,8 @@
+/*
+Author: Yihao Liang
+liangyihaosjtu@gmail.com
+This code is for Event Chain Monte Carlo for pairwise interacting many body system
+*/
 #include "manage.hpp"
 #include "basic.hpp"
 #include <iostream>

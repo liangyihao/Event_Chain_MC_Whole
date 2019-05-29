@@ -1,3 +1,8 @@
+/*
+Author: Yihao Liang
+liangyihaosjtu@gmail.com
+This code is for Event Chain Monte Carlo for pairwise interacting many body system
+*/
 //deal with short-range interactions
 //range:[0,Lx],[0,Ly],[0,Lz]
 #ifndef CELL_LIST

@@ -1,3 +1,8 @@
+/*
+Author: Yihao Liang
+liangyihaosjtu@gmail.com
+This code is for Event Chain Monte Carlo for pairwise interacting many body system
+*/
 #ifndef PAIRWISE_INTERACTION_ECMC
 #define PAIRWISE_INTERACTION_ECMC
 #include"basic.hpp"

@@ -1,3 +1,8 @@
+/*
+Author: Yihao Liang
+liangyihaosjtu@gmail.com
+This code is for Event Chain Monte Carlo for pairwise interacting many body system
+*/
 #ifndef GET_MAX_Q
 #define GET_MAX_Q
 #include "Ewald_Sum_Factor.hpp"
