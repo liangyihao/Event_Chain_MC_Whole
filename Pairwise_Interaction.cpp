@@ -166,30 +166,41 @@ double Event_Time_Spring(double4 X1,double4 X2,int axis_index,double*Params, dou
 
     if(q2<q)return 2*Lxx;
 
-    //Find solution
-    double sm,qm,dr_m;
-    double s10,q10,dr_10;
-    s10=s1;q10=q1;dr_10=dr_1;
-    double bas;
-    bas=q10-0.5*K*(dr_10-l0)*(dr_10-l0);
-//    while((abs(q2-q1)>1E-10)||(abs(s2-s1)>1E-10)) {
-    while(abs(s2-s1)>EPSILON*Lxx) {
-        if(s1>Max_Event_T)return 2*Lxx;//This trick is for saving time
-        sm=(s1+s2)/2;
-        dr_m=sqrt((dxx-sm)*(dxx-sm)+min_dr2);
-        qm=0.5*K*(dr_m-l0)*(dr_m-l0)+bas;
-        if(qm>q){
-            q2=qm;
-            s2=sm;
-            dr_2=dr_m;
-        }else {
-            q1=qm;
-            s1=sm;
-            dr_1=dr_m;
+    
+    //Find solution directly
+    double sf;//final value
+    {
+        double ddd,dddd;
+        double drc1,drc2;
+        ddd=sqrt(2.0*(q-q1)/K + (dr_1-l0)*(dr_1-l0));
+        drc1=l0+ddd;
+        drc2=l0-ddd;
+        double sf_;
+        if(drc1>-EPSILON*Lxx){
+            dddd=drc1*drc1-min_dr2;
+            if(dddd>-EPSILON*Lxx*EPSILON*Lxx){
+                if(dddd<0)dddd=0;
+                dddd=sqrt(dddd);
+                sf_=dxx+dddd;
+                if((sf_-s1>-EPSILON*Lxx)&&(sf_-s2<EPSILON*Lxx))sf=sf_;
+                sf_=dxx-dddd;
+                if((sf_-s1>-EPSILON*Lxx)&&(sf_-s2<EPSILON*Lxx))sf=sf_;
+            }
+        }
+        if(drc2>0){
+            dddd=drc2*drc2-min_dr2;
+            if(dddd>-EPSILON*Lxx*EPSILON*Lxx){
+                if(dddd<0)dddd=0;
+                dddd=sqrt(dddd);
+                sf_=dxx+dddd;
+                if((sf_-s1>-EPSILON*Lxx)&&(sf_-s2<EPSILON*Lxx))sf=sf_;
+                sf_=dxx-dddd;
+                if((sf_-s1>-EPSILON*Lxx)&&(sf_-s2<EPSILON*Lxx))sf=sf_;
+            }
         }
     }
-
-    return sm;
+    
+    return sf;
 }
 
 

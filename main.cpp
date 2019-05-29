@@ -85,6 +85,7 @@ void Init(){
     for(int k=0;k<end_to_end_ids.size();k++)cout<<end_to_end_ids[k].x<<' '<<end_to_end_ids[k].y<<endl;
     
     Global_Cell_List_Pointer=new CellList(Lx, Ly, Lz, MAX_SHORT_INTERACTION_RANGE, (&Types));
+    initialize_sys_charge();
 }
 
 double g[BINNUM];

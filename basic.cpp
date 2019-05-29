@@ -210,6 +210,8 @@ void Get_Event(double&time, int2&id_next_active_bead, int axis) {
         if(T>Size_1D)N_layers_needed=N_Layers_1D;
     }
 
+    //!!!Now coloumb interaction
+    for(int k=0;k<Cell_Veto_Lists.size();k++)Cell_Veto_Lists[k]->Get_Colomb_Event(Active_Bead,axis,7.117,T,NA);
 
     time=T;
     id_next_active_bead=NA;
@@ -221,6 +223,7 @@ void Monte_Carlo(double Stop_Clock,int axis) {
     double Clock=0;
     double time,exe_time;
     double temp;
+    double4 NX;
     //Need to randomly choose an active particle, implement it later
         Active_Bead.x=(int)(Uniform_Random()*Types.size());
         Active_Bead.y=(int)(Uniform_Random()*Types[Active_Bead.x].X.size());
@@ -263,6 +266,11 @@ void Monte_Carlo(double Stop_Clock,int axis) {
         }
         
         Global_Cell_List_Pointer->Move(Active_Bead, exe_time, axis);
+
+        //!!!For all cell-veto list, update
+        NX=Types[Active_Bead.x].X[Active_Bead.y];
+        for(int k=0;k<Cell_Veto_Lists.size();k++)Cell_Veto_Lists[k]->Update(Active_Bead,NX);
+
         Clock+=exe_time;
         Active_Bead=id_next_active_bead;
     }
