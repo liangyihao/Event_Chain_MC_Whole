@@ -27,6 +27,10 @@ int Create_Type() {//Create Type, return it's id
 }
 
 int Create_Bead(int type_id,double4 x){//Create Bead, return its secondary id. If failed, return -1.
+    if(abs(valence_of_type[type_id])>EPSILON){
+        cout<<"Error Creating Bead, should call Create_Charged_Bead"<<endl;
+        exit(0);
+    }
     if(type_id>=Types.size()) {
         cout<<"Error Creating Bead: type-id incorrect"<<endl;
         return -1;
@@ -55,6 +59,10 @@ int Create_Bead(int type_id,double4 x){//Create Bead, return its secondary id. I
 }
 
 int Create_Charged_Type(double valence) {//Create Charged Type, return it's id
+    if(abs(valence)<EPSILON){
+        cout<<"Error: Charged type cannot have valence 0"<<endl;
+        exit(0);
+    }
     Bead_Type new_type;
     new_type.index=Types.size();
     new_type.Interactions_with_Beads.clear();

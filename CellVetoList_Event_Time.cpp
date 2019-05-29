@@ -119,7 +119,7 @@ void CellVetoList::Get_Colomb_Event_Cell_Veto(int2 id_active_particle, int axis,
 						}
 		    //step 2: generate events by cell-veto
             do{
-                temp=Exponential_Random(Q_axis_tot*X1.w*valence*Bjerrum_Length);//pre-event
+                temp=Exponential_Random(abs(Q_axis_tot*X1.w*valence*Bjerrum_Length));//pre-event
                 if(clock+temp>next_bound_clock)break;//check if this event later than the cell boundary, if yes, break
                 if(clock+temp>Time){//check if this event later than other known event
                     time=Time;
@@ -137,13 +137,16 @@ void CellVetoList::Get_Colomb_Event_Cell_Veto(int2 id_active_particle, int axis,
                 //assign it to a cell
                 IWC2=Int_To_Int3(FG_axis->Gen());
                 double q_max_cell;
-                if(abs(axis)==1)q_max_cell=qx_max[IWC2.x][IWC2.y][IWC2.x];
-                if(abs(axis)==2)q_max_cell=qy_max[IWC2.x][IWC2.y][IWC2.x];
-                if(abs(axis)==3)q_max_cell=qz_max[IWC2.x][IWC2.y][IWC2.x];
+                if(abs(axis)==1)q_max_cell=qx_max[IWC2.x][IWC2.y][IWC2.z];
+                if(abs(axis)==2)q_max_cell=qy_max[IWC2.x][IWC2.y][IWC2.z];
+                if(abs(axis)==3)q_max_cell=qz_max[IWC2.x][IWC2.y][IWC2.z];
+                q_max_cell*=abs(X1.w*valence);
 
-                if(axis==-1)IWC2.x*=-1;
-                if(axis==-2)IWC2.y*=-1;
-                if(axis==-3)IWC2.z*=-1;
+                if(axis*X1.w*valence<0){
+                    if(abs(axis)==1)IWC2.x*=-1;
+                    if(abs(axis)==2)IWC2.y*=-1;
+                    if(abs(axis)==3)IWC2.z*=-1;
+                }
 
                 IWC2.x=IWC.x+IWC2.x;
                 IWC2.y=IWC.y+IWC2.y;

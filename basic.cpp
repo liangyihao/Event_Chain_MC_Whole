@@ -210,7 +210,7 @@ void Get_Event(double&time, int2&id_next_active_bead, int axis) {
         if(T>Size_1D)N_layers_needed=N_Layers_1D;
     }
 
-    //!!!Now coloumb interaction
+    //Coloumb interaction
     for(int k=0;k<Cell_Veto_Lists.size();k++)Cell_Veto_Lists[k]->Get_Colomb_Event(Active_Bead,axis,7.117,T,NA);
 
     time=T;

@@ -45,15 +45,16 @@ CellVetoList::CellVetoList(double Lx, double Ly, double Lz, double valence, vect
 	type_id_list.clear();
 	ES=new Ewald_Sum(Lx,Ly,Lz,1E-10);
 	//All the charged particles with assigned valence should be listed in thise Cell-Veto-List, now check
+	InWhichVetoCell.resize(Types_pointer->size());
     for(int type_id=0;type_id<Types_pointer->size();type_id++){
 		InWhichVetoCell[type_id].clear();
         if((*Types_pointer)[type_id].X.size()==0)continue;
-		if(((*Types_pointer)[type_id].X[0].w-valence)>EPSILON)continue;
+		if(abs((*Types_pointer)[type_id].X[0].w-valence)>EPSILON)continue;
 		type_id_list.push_back(type_id);
 		for(int k=0;k<(*Types_pointer)[type_id].X.size();k++){
             
 			if(abs((*Types_pointer)[type_id].X[k].w-valence)>EPSILON){
-                cout<<"Error "<<endl;
+                cout<<"Error, valence doesn't match "<<endl;
 				exit(-1);
             }
 			NParticles++;
@@ -67,6 +68,10 @@ CellVetoList::CellVetoList(double Lx, double Ly, double Lz, double valence, vect
 	NC_y=(int)(Ly/dL);//for y>NC_y*dL, it is absorbed into last cell
 	NC_z=(int)(Lz/dL);//for z>NC_z*dL, it is absorbed into last cell
 
+	if(NC_x<5)NC_x=5;
+	if(NC_y<5)NC_y=5;
+	if(NC_z<5)NC_z=5;
+
 	this->Lx=Lx;
 	this->Ly=Ly;
 	this->Lz=Lz;
@@ -75,22 +80,19 @@ CellVetoList::CellVetoList(double Lx, double Ly, double Lz, double valence, vect
     this->dLy=Ly/NC_y;
     this->dLz=Lz/NC_z;
 
-
+	this->Num_Particle_Per_Cell=1;
 
 	//Now construct Cell List
 	//vector<vector<int3> >InWhichCell;
 	//InWhichCell[type_id][bead_id] stores the in which cell each bead is
 	//vector<vector<vector<Cell> > >Cells;
 	//If there are more than Num_Particle_Per_Cell particles in a cell, the excessive particle should be put into Exception_Particle_List
-	Veto_Cell Empty_Cell;
+	//Veto_Cell Empty_Cell;
 	Veto_Cells.resize(NC_x);
 	for(int k=0;k<NC_x;k++){
 		Veto_Cells[k].resize(NC_y);
 		for(int l=0;l<NC_y;l++) {
-			Veto_Cells[k][l].clear();
-			for(int m=0;m<NC_z;m++) {
-				Veto_Cells[k][l].push_back(Empty_Cell);
-			}
+			Veto_Cells[k][l].resize(NC_z);
 		}
 	}
 	Exception_Particle_List.clear();
@@ -132,10 +134,16 @@ CellVetoList::CellVetoList(double Lx, double Ly, double Lz, double valence, vect
 	for(int Ix=0;Ix<NC_x;Ix++)
 		for(int Iy=0;Iy<NC_y;Iy++)
 			for(int Iz=0;Iz<NC_z;Iz++){
-				if((Ix<=1)&&(Iy<=1)&&(Iz<=1)){
+
+				int Ixr=Ix,Iyr=Iy,Izr=Iz;
+				if(Ixr>NC_x/2)Ixr-=NC_x;
+				if(Iyr>NC_y/2)Iyr-=NC_y;
+				if(Izr>NC_z/2)Izr-=NC_z;
+				if((abs(Ixr)<=1)&&(abs(Iyr)<=1)&&(abs(Izr)<=1)){
 					qx_max[Ix][Iy][Iz]=0;
 					continue;
 				}
+
 				double xb1,xb2,yb1,yb2,zb1,zb2;
 				xb1=(Ix-1)*dLx;
 				xb2=(Ix+1)*dLx;
@@ -164,10 +172,17 @@ CellVetoList::CellVetoList(double Lx, double Ly, double Lz, double valence, vect
 	for(int Ix=0;Ix<NC_x;Ix++)
 		for(int Iy=0;Iy<NC_y;Iy++)
 			for(int Iz=0;Iz<NC_z;Iz++){
-				if((Ix<=1)&&(Iy<=1)&&(Iz<=1)){
+
+
+				int Ixr=Ix,Iyr=Iy,Izr=Iz;
+				if(Ixr>NC_x/2)Ixr-=NC_x;
+				if(Iyr>NC_y/2)Iyr-=NC_y;
+				if(Izr>NC_z/2)Izr-=NC_z;
+				if((abs(Ixr)<=1)&&(abs(Iyr)<=1)&&(abs(Izr)<=1)){
 					qy_max[Ix][Iy][Iz]=0;
 					continue;
 				}
+
 				double xb1,xb2,yb1,yb2,zb1,zb2;
 				xb1=(Ix-1)*dLx;
 				xb2=(Ix+1)*dLx;
@@ -196,10 +211,16 @@ CellVetoList::CellVetoList(double Lx, double Ly, double Lz, double valence, vect
 	for(int Ix=0;Ix<NC_x;Ix++)
 		for(int Iy=0;Iy<NC_y;Iy++)
 			for(int Iz=0;Iz<NC_z;Iz++){
-				if((Ix<=1)&&(Iy<=1)&&(Iz<=1)){
+
+				int Ixr=Ix,Iyr=Iy,Izr=Iz;
+				if(Ixr>NC_x/2)Ixr-=NC_x;
+				if(Iyr>NC_y/2)Iyr-=NC_y;
+				if(Izr>NC_z/2)Izr-=NC_z;
+				if((abs(Ixr)<=1)&&(abs(Iyr)<=1)&&(abs(Izr)<=1)){
 					qz_max[Ix][Iy][Iz]=0;
 					continue;
 				}
+
 				double xb1,xb2,yb1,yb2,zb1,zb2;
 				xb1=(Ix-1)*dLx;
 				xb2=(Ix+1)*dLx;
@@ -225,9 +246,10 @@ void CellVetoList::Update(int2 const ids, double4 const NX) {
 	bead_id=ids.y;
 
 	//check if it is in this cell-veto list
-	if((*Types_pointer)[type_id].X.size()==0){
+	if(InWhichVetoCell[ids.x].size()==0)return;/*{
 		cout<<"Error, bead "<<type_id<<","<<bead_id<<" is not in this cell-veto list"<<endl;
-	}
+		exit(0);
+	}*/
 	//move it
 	int3 IWC1,IWC2;
 
