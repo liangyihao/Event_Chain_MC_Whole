@@ -88,10 +88,12 @@ void CellVetoList::Get_Colomb_Event_Cell_Veto(int2 id_active_particle, int axis,
 
         int sign=axis/abs(axis);
         double clock=0;
-        double next_bound_clock;
+        double next_bound_clock,next_bound_coordinate;
         if(sign==1){
+            next_bound_coordinate=((*IWC_axis)+1)*dL_axis;
             next_bound_clock=((*IWC_axis)+1)*dL_axis-(*X1_t_axis);
         }else if(sign==-1){
+            next_bound_coordinate=(*IWC_axis)*dL_axis;
             next_bound_clock=(*X1_t_axis)-(*IWC_axis)*dL_axis;
         }
 
@@ -132,7 +134,11 @@ void CellVetoList::Get_Colomb_Event_Cell_Veto(int2 id_active_particle, int axis,
 		    //step 2: generate events by cell-veto
             do{
                 temp=Exponential_Random(abs(Q_axis_tot*X1.w*valence*Bjerrum_Length));//pre-event
-                if(clock+temp>next_bound_clock)break;//check if this event later than the cell boundary, if yes, break
+                if(clock+temp>next_bound_clock){//check if this event later than the cell boundary, if yes, break
+                    (*X1_t_axis)=next_bound_coordinate;
+                    clock=next_bound_clock;
+                    break;
+                }
                 if(clock+temp>Time){//check if this event later than other known event
                     time=Time;
                     id_active_particle=Id_Next_Active_Bead;
@@ -153,7 +159,9 @@ void CellVetoList::Get_Colomb_Event_Cell_Veto(int2 id_active_particle, int axis,
                 if(abs(axis)==2)q_max_cell=qy_max[IWC2.x][IWC2.y][IWC2.z];
                 if(abs(axis)==3)q_max_cell=qz_max[IWC2.x][IWC2.y][IWC2.z];
                 q_max_cell*=abs(X1.w*valence);
-
+//                cout<<"direction:"<<axis;//For debug
+//                cout<<" charge:"<<X1.w<<' '<<valence<<endl;
+//                cout<<IWC2.x<<' '<<IWC2.y<<" "<<IWC2.z<<endl;//For debug
                 if(axis*X1.w*valence<0){
                     if(abs(axis)==1)IWC2.x*=-1;
                     if(abs(axis)==2)IWC2.y*=-1;
@@ -181,6 +189,9 @@ void CellVetoList::Get_Colomb_Event_Cell_Veto(int2 id_active_particle, int axis,
                 X2=X2=(*Types_pointer)[ids.x].X[ids.y];
                 double q;
                 q=max(ES->D_Potential(X1_t,X2,axis),0.0);
+//                cout<<"Active Cell "<<IWC.x<<' '<<IWC.y<<' '<<IWC.z<<endl;//For debug
+//                cout<<"Target Cell "<<IWC2.x<<' '<<IWC2.y<<' '<<IWC2.z<<endl;//For debug
+//                cout<<q<<' '<<q_max_cell<<' '<<q/q_max_cell<<endl<<endl;//For debug
                 if(Uniform_Random()<q/q_max_cell){//check if it is a real event
                     //real event
                     time=clock;
@@ -191,11 +202,15 @@ void CellVetoList::Get_Colomb_Event_Cell_Veto(int2 id_active_particle, int axis,
 
         //step 3: update
             (*IWC_axis)+=sign;
+
             if(sign==1){
+                next_bound_coordinate=((*IWC_axis)+1)*dL_axis;
                 next_bound_clock=((*IWC_axis)+1)*dL_axis-(*X1_t_axis);
             }else if(sign==-1){
+                next_bound_coordinate=(*IWC_axis)*dL_axis;
                 next_bound_clock=(*X1_t_axis)-(*IWC_axis)*dL_axis;
             }
+
 
             if((*IWC_axis)>=NC_axis){
                 (*X1_t_axis)-=L_axis;

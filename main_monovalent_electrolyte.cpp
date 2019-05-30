@@ -112,8 +112,11 @@ int main(){
     Init();
     Global_Cell_List_Pointer->print();
     cout<<endl<<endl<<endl;
+
     double ifstat=false,ifprint=false;
-    for(int l=0;l<Cell_Veto_Lists.size();l++)Cell_Veto_Lists[l]->check_print();//For debug
+//    for(int l=0;l<Cell_Veto_Lists.size();l++)Cell_Veto_Lists[l]->check_print();//For debug
+//    for(int l=0;l<Cell_Veto_Lists.size();l++)Cell_Veto_Lists[l]->check_rate();//For debug
+    
     for(int k=0;k<2000000;k++) {
         //if(k%100000==0)
         //Check();//For debug
@@ -149,7 +152,7 @@ int main(){
 
 //        cout<<"Moving along -z"<<endl;        
         Monte_Carlo(800,-3);
-        for(int l=0;l<Cell_Veto_Lists.size();l++)Cell_Veto_Lists[l]->check_print();//For debug
+//        for(int l=0;l<Cell_Veto_Lists.size();l++)Cell_Veto_Lists[l]->check_print();//For debug
 
 //        Global_Cell_List_Pointer->print();
         ifprint=false;

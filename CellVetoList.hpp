@@ -92,6 +92,7 @@ public:
 	void Update(int2 const ids, double4 const NX);
 	void Get_Colomb_Event(int2 id_active_particle, int axis, double Bjerrum_Length, double&time, int2&id_next_active_bead);
 	void check_print();
+	void check_rate();
 	//void Adjust();//If the number of exception particles is big enough, try to increase the maximum number of particles per cell.
 };
 
