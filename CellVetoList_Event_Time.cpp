@@ -106,9 +106,20 @@ void CellVetoList::Get_Colomb_Event_Cell_Veto(int2 id_active_particle, int axis,
 	    	//step 1: go over all the charged particles in the nearest neighboring cells
 			for(int i=IWC.x-1;i<=IWC.x+1;i++)
 				for(int j=IWC.y-1;j<=IWC.y+1;j++)
-					for(int k=IWC.z-1;k<=IWC.z+1;k++)
-						for(int l=0;l<Veto_Cells[IWC.x][IWC.y][IWC.z].particle_list.size();l++){
-							ids=Veto_Cells[IWC.x][IWC.y][IWC.z].particle_list[l];
+					for(int k=IWC.z-1;k<=IWC.z+1;k++){
+						IWC2.x=i;IWC2.y=j;IWC2.z=k;
+                        
+                        if(IWC2.x>=NC_x)IWC2.x-=NC_x;
+                        if(IWC2.x<0)IWC2.x+=NC_x;
+
+                        if(IWC2.y>=NC_y)IWC2.y-=NC_y;
+                        if(IWC2.y<0)IWC2.y+=NC_y;
+
+                        if(IWC2.z>=NC_z)IWC2.z-=NC_z;
+                        if(IWC2.z<0)IWC2.z+=NC_z;
+
+                        for(int l=0;l<Veto_Cells[IWC2.x][IWC2.y][IWC2.z].particle_list.size();l++){
+							ids=Veto_Cells[IWC2.x][IWC2.y][IWC2.z].particle_list[l];
                             if((ids.x==id_active_particle.x)&&(ids.y==id_active_particle.y))continue;
 							X2=(*Types_pointer)[ids.x].X[ids.y];
 							temp=ES->Event_Time_Colomb(X1_t,X2,axis,Bjerrum_Length,next_bound_clock-clock);//need check
@@ -117,6 +128,7 @@ void CellVetoList::Get_Colomb_Event_Cell_Veto(int2 id_active_particle, int axis,
 								Id_Next_Active_Bead=ids;//need use another one
 							}
 						}
+                    }
 		    //step 2: generate events by cell-veto
             do{
                 temp=Exponential_Random(abs(Q_axis_tot*X1.w*valence*Bjerrum_Length));//pre-event

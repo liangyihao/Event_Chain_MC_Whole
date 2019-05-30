@@ -20,19 +20,37 @@ void CellVetoList::Insert(int2 ids, int3 CellID) {
 void CellVetoList::Delete(int2 ids, int3 CellID) {
 		Veto_Cell*VC;
 		VC=&Veto_Cells[CellID.x][CellID.y][CellID.z];
-		for(int k=0;k<VC->particle_list.size();k++)
+		int Num_Particle_In_This_Cell;
+		int Num_Particle_Exception;
+		Num_Particle_In_This_Cell=VC->particle_list.size();
+		Num_Particle_Exception=Exception_Particle_List.size();
+
+		for(int k=0;k<Num_Particle_In_This_Cell;k++)
 			if((VC->particle_list[k].x==ids.x)&&(VC->particle_list[k].y==ids.y)) {
-				VC->particle_list[k]=VC->particle_list[VC->particle_list.size()-1];
-				VC->particle_list.pop_back();
-				if(k>=Num_Particle_Per_Cell){//remove from exception particle list
-					for(int l=0;l<Exception_Particle_List.size();l++){
+				
+				if(k>=Num_Particle_Per_Cell){//remove ids from exception particle list
+					for(int l=0;l<Num_Particle_Exception;l++){
 						if((Exception_Particle_List[l].x==ids.x)&&(Exception_Particle_List[l].y==ids.y)) {
-							Exception_Particle_List[l]=Exception_Particle_List[Exception_Particle_List.size()-1];
+							Exception_Particle_List[l]=Exception_Particle_List[Num_Particle_Exception-1];
 							Exception_Particle_List.pop_back();
 							break;
 						}
 					}
 				}
+
+
+				if((k<Num_Particle_Per_Cell)&&(Num_Particle_In_This_Cell>Num_Particle_Per_Cell)){//remove last bead from exception particle list
+					for(int l=0;l<Num_Particle_Exception;l++){
+						if((Exception_Particle_List[l].x==VC->particle_list[Num_Particle_In_This_Cell-1].x)&&(Exception_Particle_List[l].y==VC->particle_list[Num_Particle_In_This_Cell-1].y)) {
+							Exception_Particle_List[l]=Exception_Particle_List[Num_Particle_Exception-1];
+							Exception_Particle_List.pop_back();
+							break;
+						}
+					}
+				}
+
+				VC->particle_list[k]=VC->particle_list[Num_Particle_In_This_Cell-1];
+				VC->particle_list.pop_back();
 				return;
 			}
 }
@@ -262,38 +280,50 @@ void CellVetoList::Update(int2 const ids, double4 const NX) {
 	Insert(ids, IWC2);
 	InWhichVetoCell[ids.x][ids.y]=IWC2;
 }
-/*
-void CellVetoList::print() {
-	//Step1: Print Cell List
-	
-	bool mark;
+
+void CellVetoList::check_print() {
+	//Step1: check cell and iwc
+	cout<<"Cell Veto List checking"<<endl;
+	int2 ids;
+	int3 IWC_mem,IWC_dyn;
+	double4 X;
 	for(int i=0;i<NC_x;i++)
 		for(int j=0;j<NC_y;j++)
-			for(int k=0;k<NC_z;k++) {
-				mark=false;
-				for(int type_id=0;type_id<Cells[i][j][k].particle_list.size();type_id++)
-					for(int uu=0;uu<Cells[i][j][k].particle_list[type_id].size();uu++)
-						{
-							if(!mark){
-								cout<<"In cell ("<<i<<','<<j<<','<<k<<")"<<endl;
-								mark=true;
-							}
-							cout<<"type "<<type_id<<" id: "<<Cells[i][j][k].particle_list[type_id][uu]<<endl;
+			for(int k=0;k<NC_z;k++)
+				for(int l=0;l<Veto_Cells[i][j][k].particle_list.size();l++){
+					ids=Veto_Cells[i][j][k].particle_list[l];
+					X=(*Types_pointer)[ids.x].X[ids.y];
+					IWC_mem=InWhichVetoCell[ids.x][ids.y];
+					IWC_dyn=In_Which_Veto_Cell(X);
+					if((IWC_mem.x!=i)||(IWC_mem.y!=j)||(IWC_mem.z!=k)){
+						cout<<"Error Cell information inconsistent"<<endl;
+						exit(0);
+					}
+					if((IWC_dyn.x!=i)||(IWC_dyn.y!=j)||(IWC_dyn.z!=k)){
+						cout<<"Warning Cell information inconsistent"<<endl;
+						cout<<"X=("<<X.x<<","<<X.y<<","<<X.z<<","<<X.w<<")"<<endl;
+						cout<<"correct cell position:"<<IWC_dyn.x<<' '<<IWC_dyn.y<<' '<<IWC_dyn.z<<')'<<endl;
+						cout<<"current cell position:"<<i<<' '<<j<<' '<<k<<endl<<endl;
+					}
+					if(l>=Num_Particle_Per_Cell){//check if it is in the exception particle list
+						int m;
+						for(m=0;m<Exception_Particle_List.size();m++)if((Exception_Particle_List[m].x==ids.x)&&(Exception_Particle_List[m].y==ids.y))break;
+						if(m==Exception_Particle_List.size()){
+							cout<<"Error: Exception Particle not in the list"<<endl;
 						}
-			}		
-	cout<<endl<<endl;
-
-	//Step2: Print "In which cell"
-	int2 ids;
-	int3 i3;
-	for(int type_id=0;type_id<Types_pointer->size();type_id++)
-		for(int bead_id=0;bead_id<(*Types_pointer)[type_id].X.size();bead_id++){
-			cout<<"Type "<<type_id<<" id: "<<bead_id<<endl;
-			cout<<"Position "<<(*Types_pointer)[type_id].X[bead_id].x<<' '<<(*Types_pointer)[type_id].X[bead_id].y<<' '<<(*Types_pointer)[type_id].X[bead_id].z<<endl;
-			ids.x=type_id;ids.y=bead_id;
-			i3=In_Which_Cell(ids);
-			cout<<"In cell "<<i3.x<<' '<<i3.y<<' '<<i3.z<<endl<<endl;
+					}
+				}
+	for(int k=0;k<Exception_Particle_List.size();k++){
+		ids=Exception_Particle_List[k];
+		IWC_mem=InWhichVetoCell[ids.x][ids.y];
+		int l;
+		for(l=0;Veto_Cells[IWC_mem.x][IWC_mem.y][IWC_mem.z].particle_list.size();l++){
+			if((Veto_Cells[IWC_mem.x][IWC_mem.y][IWC_mem.z].particle_list[l].x==ids.x)&&(Veto_Cells[IWC_mem.x][IWC_mem.y][IWC_mem.z].particle_list[l].y==ids.y))break;
 		}
-	cout<<endl;
+		if(l<Num_Particle_Per_Cell){
+			cout<<"Error: Exception Particle incorrect"<<endl;
+		}
+	}
+	cout<<"# of Exception Particles: "<<Exception_Particle_List.size()<<endl;
+	cout<<"Cell Veto List checking finished"<<endl;
 }
-*/
