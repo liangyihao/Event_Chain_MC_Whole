@@ -82,9 +82,9 @@ CellVetoList::CellVetoList(double Lx, double Ly, double Lz, double valence, vect
 	//Now generate grid
 	double dL;
 	dL=pow(Lx*Ly*Lz/NParticles,1.0/3.0);
-	NC_x=(int)(Lx/dL);//for x>NC_x*dL, it is absorbed into last cell
-	NC_y=(int)(Ly/dL);//for y>NC_y*dL, it is absorbed into last cell
-	NC_z=(int)(Lz/dL);//for z>NC_z*dL, it is absorbed into last cell
+	NC_x=(int)(Lx/dL)*1;//for x>NC_x*dL, it is absorbed into last cell
+	NC_y=(int)(Ly/dL)*1;//for y>NC_y*dL, it is absorbed into last cell
+	NC_z=(int)(Lz/dL)*1;//for z>NC_z*dL, it is absorbed into last cell
 
 	if(NC_x<5)NC_x=5;
 	if(NC_y<5)NC_y=5;
@@ -98,7 +98,7 @@ CellVetoList::CellVetoList(double Lx, double Ly, double Lz, double valence, vect
     this->dLy=Ly/NC_y;
     this->dLz=Lz/NC_z;
 
-	this->Num_Particle_Per_Cell=1;
+	this->Num_Particle_Per_Cell=4;
 
 	//Now construct Cell List
 	//vector<vector<int3> >InWhichCell;
@@ -325,6 +325,7 @@ void CellVetoList::check_print() {
 		}
 	}
 	cout<<"# of Exception Particles: "<<Exception_Particle_List.size()<<endl;
+	cout<<"Q:"<<Qx_tot<<' '<<Qy_tot<<' '<<Qz_tot<<endl;
 	cout<<"Cell Veto List checking finished"<<endl;
 }
 

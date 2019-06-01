@@ -91,13 +91,13 @@ void CellVetoList::Get_Colomb_Event_Cell_Veto(int2 id_active_particle, int axis,
         double next_bound_clock,next_bound_coordinate;
         if(sign==1){
             next_bound_coordinate=((*IWC_axis)+1)*dL_axis;
-            next_bound_clock=((*IWC_axis)+1)*dL_axis-(*X1_t_axis);
+            next_bound_clock=((*IWC_axis)+1)*dL_axis-(*X1_t_axis)+clock;
         }else if(sign==-1){
             next_bound_coordinate=(*IWC_axis)*dL_axis;
-            next_bound_clock=(*X1_t_axis)-(*IWC_axis)*dL_axis;
+            next_bound_clock=(*X1_t_axis)-(*IWC_axis)*dL_axis+clock;
         }
 
-    	do{
+    	do{//loop for each possible cell
             double Time=time;
             int2 Id_Next_Active_Bead=id_next_active_bead;
             int2 ids;
@@ -120,7 +120,7 @@ void CellVetoList::Get_Colomb_Event_Cell_Veto(int2 id_active_particle, int axis,
                         if(IWC2.z>=NC_z)IWC2.z-=NC_z;
                         if(IWC2.z<0)IWC2.z+=NC_z;
 
-                        for(int l=0;l<Veto_Cells[IWC2.x][IWC2.y][IWC2.z].particle_list.size();l++){
+                        for(int l=0;l<min((int)(Veto_Cells[IWC2.x][IWC2.y][IWC2.z].particle_list.size()),Num_Particle_Per_Cell);l++){
 							ids=Veto_Cells[IWC2.x][IWC2.y][IWC2.z].particle_list[l];
                             if((ids.x==id_active_particle.x)&&(ids.y==id_active_particle.y))continue;
 							X2=(*Types_pointer)[ids.x].X[ids.y];
@@ -133,22 +133,29 @@ void CellVetoList::Get_Colomb_Event_Cell_Veto(int2 id_active_particle, int axis,
                     }
 		    //step 2: generate events by cell-veto
             do{
-                temp=Exponential_Random(abs(Q_axis_tot*X1.w*valence*Bjerrum_Length));//pre-event
-                if(clock+temp>next_bound_clock){//check if this event later than the cell boundary, if yes, break
+                temp=Exponential_Random(abs(Q_axis_tot*X1.w*valence*Bjerrum_Length*Num_Particle_Per_Cell));//pre-event
+                if(clock+temp>Time){//check if group event later than other known event
+                    if(Time<next_bound_clock){
+                        time=Time;
+                        id_active_particle=Id_Next_Active_Bead;
+                        return;
+                    }else{
+                        (*X1_t_axis)=next_bound_coordinate;
+                        clock=next_bound_clock;
+                        break;
+                    }
+                }
+                if(clock+temp>L_axis){//check if group event later than one period
+                    time=Time;
+                    id_active_particle=Id_Next_Active_Bead;
+                    return;
+                }
+                if(clock+temp>next_bound_clock){//check if group event later than the cell boundary, if yes, break
                     (*X1_t_axis)=next_bound_coordinate;
                     clock=next_bound_clock;
                     break;
                 }
-                if(clock+temp>Time){//check if this event later than other known event
-                    time=Time;
-                    id_active_particle=Id_Next_Active_Bead;
-                    return;
-                }
-                if(clock+temp>L_axis){//check if this event later than one period
-                    time=Time;
-                    id_active_particle=Id_Next_Active_Bead;
-                    return;
-                }
+
                 clock+=temp;
                 (*X1_t_axis)=(*X1_axis)+clock*sign;
 
@@ -179,6 +186,7 @@ void CellVetoList::Get_Colomb_Event_Cell_Veto(int2 id_active_particle, int axis,
                 if(IWC2.z< 0)IWC2.z+=NC_z;
 
                 //assign it to a particle in that cell
+                if(Veto_Cells[IWC2.x][IWC2.y][IWC2.z].particle_list.size()==0)continue;
                 double p;
                 p=Uniform_Random()*Num_Particle_Per_Cell;
                 if(p>=Veto_Cells[IWC2.x][IWC2.y][IWC2.z].particle_list.size())continue;
@@ -205,10 +213,12 @@ void CellVetoList::Get_Colomb_Event_Cell_Veto(int2 id_active_particle, int axis,
 
             if(sign==1){
                 next_bound_coordinate=((*IWC_axis)+1)*dL_axis;
-                next_bound_clock=((*IWC_axis)+1)*dL_axis-(*X1_t_axis);
+                next_bound_clock+=dL_axis;
+                //next_bound_clock=((*IWC_axis)+1)*dL_axis-(*X1_t_axis)+clock;
             }else if(sign==-1){
                 next_bound_coordinate=(*IWC_axis)*dL_axis;
-                next_bound_clock=(*X1_t_axis)-(*IWC_axis)*dL_axis;
+                next_bound_clock+=dL_axis;
+                //next_bound_clock=(*X1_t_axis)-(*IWC_axis)*dL_axis+clock;
             }
 
 

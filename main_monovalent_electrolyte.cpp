@@ -45,7 +45,7 @@ void Check(){
 
 void Init(){
     Lx=100;Ly=100;Lz=100;
-    const int N=10;
+    const int N=1000;
     rand_init(1);
     int tid1,tid2;
     tid1=Create_Charged_Type(1);//type A, hard sphere diameter 10
@@ -59,15 +59,16 @@ void Init(){
     double xc,yc,zc;
 
     int type=0;
-    for(xc=0;xc<Lx-d0;xc+=2*d0)
-        for(yc=0;yc<Ly-d0;yc+=2*d0)
-            for(zc=0;zc<Lz-d0;zc+=2*d0) {
+    for(xc=0;xc<Lx-d0;xc+=1.01*d0)
+        for(yc=0;yc<Ly-d0;yc+=1.01*d0)
+            for(zc=0;zc<Lz-d0;zc+=1.01*d0) {
                 if((Types[0].X.size()==N)&&(type==0))type=1;
                 if((Types[1].X.size()==N)&&(type==1))break;
                 X.x=xc;X.y=yc;X.z=zc;
                 Create_Charged_Bead(type,X);
             }
-    
+    cout<<Types[0].X.size()<<' '<<Types[1].X.size()<<endl;
+    Check();//For debug
     Global_Cell_List_Pointer=new CellList(Lx, Ly, Lz, MAX_SHORT_INTERACTION_RANGE, (&Types));
     initialize_sys_charge();
 }
@@ -161,10 +162,12 @@ int main(){
         if(k%10==0){
             cout<<"k="<<k<<" finished"<<endl;
             //Global_Cell_List_Pointer->print();
+            for(int l=0;l<Cell_Veto_Lists.size();l++)Cell_Veto_Lists[l]->check_print();//For debug
             ifprint=true;
         }
         if(k>300000)ifstat=true;
         //if(k%100==0)sample(ifstat,ifprint);
+        
     }
 /*
     double dr=Ly/BINNUM;;
