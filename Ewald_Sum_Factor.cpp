@@ -120,85 +120,54 @@ double Ewald_Sum::Event_Time_Colomb(double4 X1,double4 X2,int axis_index,double 
 	From s=0 to s=L, we have 3 parts:
 	[0,S1],[S1,S2],[S2,L]
 	*/
+
     double q;
     q=-log(1-Uniform_Random());
     double s_left,s_right;
     double Q_left,Q_right;
-    double Prod_Charge=X1.w*X2.w;
-    
-    //double temp1,temp2;
     double Potential_Left,Potential_Right;
 
-    if((Prod_Charge>0)&&(x_dir0<0)){
-	    	//search [0,S1],[S2,L]
-	    	s_left=0;
-	    	Q_left=0;
-            
-            s_right=S1;
-            (*x_dir_pointer)=x_dir0+s_left;
-            Potential_Left=Potential(Y_active, Y_target);
-            (*x_dir_pointer)=x_dir0+s_right;
-            Potential_Right=Potential(Y_active, Y_target);
-            Q_right=Q_left+Bjerrum_Length*(Potential_Right-Potential_Left);
+    double U0,U1,U2,UL;
+    double Q0,Q1,Q2,QL;
 
-            if(q>Q_right){
-            	s_left=S2;
-                Q_left=Q_right;
+    U0=Potential(Y_active, Y_target);
+    Q0=0;
 
-            	s_right=L;
-                (*x_dir_pointer)=x_dir0+s_left;
-                Potential_Left=Potential(Y_active, Y_target);
-                (*x_dir_pointer)=x_dir0+s_right;
-                Potential_Right=Potential(Y_active, Y_target);
-                Q_right=Q_left+Bjerrum_Length*(Potential_Right-Potential_Left);
-            }
-    }else if((Prod_Charge>0)&&(x_dir0>=0)){
-	    	//only search [S1,S2]
-	    	s_left=S1;
-	    	Q_left=0;
+    (*x_dir_pointer)=x_dir0+S1;
+    U1=Potential(Y_active, Y_target);
+    Q1=Q0+max(Bjerrum_Length*(U1-U0),0.0);
 
-            s_right=S2;
-            (*x_dir_pointer)=x_dir0+s_left;
-            Potential_Left=Potential(Y_active, Y_target);
-            (*x_dir_pointer)=x_dir0+s_right;
-            Potential_Right=Potential(Y_active, Y_target);
-            Q_right=Q_left+Bjerrum_Length*(Potential_Right-Potential_Left);
-    }else if((Prod_Charge<0)&&(x_dir0<=0)){
-            //only search [S1,S2]
-	    	s_left=S1;
-	    	Q_left=0;
+    (*x_dir_pointer)=x_dir0+S2;
+    U2=Potential(Y_active, Y_target);
+    Q2=Q1+max(Bjerrum_Length*(U2-U1),0.0);
 
-            s_right=S2;
-            (*x_dir_pointer)=x_dir0+s_left;
-            Potential_Left=Potential(Y_active, Y_target);
-            (*x_dir_pointer)=x_dir0+s_right;
-            Potential_Right=Potential(Y_active, Y_target);
-            Q_right=Q_left+Bjerrum_Length*(Potential_Right-Potential_Left);
-    }else if((Prod_Charge<0)&&(x_dir0>0)){
-            //search [0,S1],[S2,L]
-	    	s_left=0;
-	    	Q_left=0;
-            
-            s_right=S1;
-            (*x_dir_pointer)=x_dir0+s_left;
-            Potential_Left=Potential(Y_active, Y_target);
-            (*x_dir_pointer)=x_dir0+s_right;
-            Potential_Right=Potential(Y_active, Y_target);
-            Q_right=Q_left+Bjerrum_Length*(Potential_Right-Potential_Left);
+    (*x_dir_pointer)=x_dir0+L;
+    UL=Potential(Y_active, Y_target);
+    QL=Q2+max(Bjerrum_Length*(UL-U2),0.0);
 
-            if(q>Q_right){
-            	s_left=S2;
-                Q_left=Q_right;
-
-            	s_right=L;
-                (*x_dir_pointer)=x_dir0+s_left;
-                Potential_Left=Potential(Y_active, Y_target);
-                (*x_dir_pointer)=x_dir0+s_right;
-                Potential_Right=Potential(Y_active, Y_target);
-                Q_right=Q_left+Bjerrum_Length*(Potential_Right-Potential_Left);
-            }
+    if(q>=QL)return 2*L;
+    if((q>=Q2)&&(q<QL)){
+        s_left=S2;
+        Q_left=Q2;
+        Potential_Left=U2;
+        s_right=L;
+        Q_right=QL;
+        Potential_Right=UL;
+    }else if(q>=Q1){
+        s_left=S1;
+        Q_left=Q1;
+        Potential_Left=U1;
+        s_right=S2;
+        Q_right=Q2;
+        Potential_Right=U2;
+    }else{
+        s_left=0;
+        Q_left=Q0;
+        Potential_Left=U0;
+        s_right=S1;
+        Q_right=Q1;
+        Potential_Right=U1;
     }
-    if(q>Q_right)return 2*L;
         
     //Find solution
     double s_mid,Q_mid;
@@ -208,7 +177,7 @@ double Ewald_Sum::Event_Time_Colomb(double4 X1,double4 X2,int axis_index,double 
     s_left0=s_left;
     Q_left0=Q_left;
     Potential_Left0=Potential_Left;
-
+    //cout<<s_left<<' '<<s_right<<endl;
     while((abs(Q_right-Q_left)>(accuracy*Bjerrum_Length/L))&&(abs(s_right-s_left)>EPSILON*L)) {
         if(s_left>Max_Event_T)return 2*L;//This trick is for saving time
         s_mid=(s_left+s_right)/2;
@@ -369,8 +338,27 @@ double Ewald_Sum::D_Potential(double4 X,double4 Y,int axis){
     }
     return -(res_R+res_k)*c1*c2;
 }
-
-
+double Ewald_Sum::D_Potential_Ramp(double4 X,double4 Y,int axis){
+    double dx,L;
+    if(abs(axis)==1){
+        dx=Y.x-X.x;
+        L=Lx;
+    }
+    if(abs(axis)==2){
+        dx=Y.y-X.y;
+        L=Ly;
+    }
+    if(abs(axis)==3){
+        dx=Y.z-X.z;
+        L=Lz;
+    }
+    while(dx>+L/2.0)dx-=L;
+    while(dx<-L/2.0)dx+=L;
+    if(X.w*Y.w*axis<0)dx=-dx;
+    if(dx<0)return 0;
+    return D_Potential(X,Y,axis);
+}
+/*
 double Ewald_Sum::D_Potential_Check(double4 X,double4 Y,int axis){
         double4 XX;
         double ep=1E-9;
@@ -391,3 +379,4 @@ double Ewald_Sum::D_Potential_Check(double4 X,double4 Y,int axis){
         P2=Potential(XX,Y);
         return (P2-P1)/abs(epsilon);
 }
+*/

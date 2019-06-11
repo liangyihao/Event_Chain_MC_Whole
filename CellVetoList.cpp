@@ -10,6 +10,7 @@ This code is for Event Chain Monte Carlo for pairwise interacting many body syst
 #include "CellVetoList.hpp"
 #include "Get_Max_q.hpp"
 #include "public.hpp"
+#include "omp.h"
 
 void CellVetoList::Insert(int2 ids, int3 CellID) {
 	Veto_Cells[CellID.x][CellID.y][CellID.z].particle_list.push_back(ids);
@@ -82,9 +83,9 @@ CellVetoList::CellVetoList(double Lx, double Ly, double Lz, double valence, vect
 	//Now generate grid
 	double dL;
 	dL=pow(Lx*Ly*Lz/NParticles,1.0/3.0);
-	NC_x=(int)(Lx/dL)*1;//for x>NC_x*dL, it is absorbed into last cell
-	NC_y=(int)(Ly/dL)*1;//for y>NC_y*dL, it is absorbed into last cell
-	NC_z=(int)(Lz/dL)*1;//for z>NC_z*dL, it is absorbed into last cell
+	NC_x=(int)(Lx/dL);//for x>NC_x*dL, it is absorbed into last cell
+	NC_y=(int)(Ly/dL);//for y>NC_y*dL, it is absorbed into last cell
+	NC_z=(int)(Lz/dL);//for z>NC_z*dL, it is absorbed into last cell
 
 	if(NC_x<5)NC_x=5;
 	if(NC_y<5)NC_y=5;
@@ -98,7 +99,7 @@ CellVetoList::CellVetoList(double Lx, double Ly, double Lz, double valence, vect
     this->dLy=Ly/NC_y;
     this->dLz=Lz/NC_z;
 
-	this->Num_Particle_Per_Cell=4;
+	this->Num_Particle_Per_Cell=1;
 
 	//Now construct Cell List
 	//vector<vector<int3> >InWhichCell;
@@ -148,8 +149,10 @@ CellVetoList::CellVetoList(double Lx, double Ly, double Lz, double valence, vect
 			qx_max[Ix][Iy].resize(NC_z);
 		}
 	}
-
-	for(int Ix=0;Ix<NC_x;Ix++)
+	int Ix;
+	double Qx_tot_temp=0;
+	#pragma omp parallel for reduction (+:Qx_tot_temp)
+	for(Ix=0;Ix<NC_x;Ix++){
 		for(int Iy=0;Iy<NC_y;Iy++)
 			for(int Iz=0;Iz<NC_z;Iz++){
 
@@ -170,13 +173,16 @@ CellVetoList::CellVetoList(double Lx, double Ly, double Lz, double valence, vect
 				zb1=(Iz-1)*dLz;
 				zb2=(Iz+1)*dLz;
 				qx_max[Ix][Iy][Iz]=get_max_q(xb1, xb2, yb1, yb2, zb1, zb2, *ES, 1);
-				Qx_tot+=qx_max[Ix][Iy][Iz];
+				Qx_tot_temp+=qx_max[Ix][Iy][Iz];
 				int temp;
 				int3 I;
 				I.x=Ix;I.y=Iy;I.z=Iz;
 				temp=Int3_To_Int(I);
 				qx_max_hist[temp]=qx_max[Ix][Iy][Iz];
 			}
+	}
+	Qx_tot=Qx_tot_temp;
+	cout<<"Qx_tot="<<Qx_tot<<endl;
 	FG_x=new Frequency_Generator(qx_max_hist);
 	//For y-axis
 	qy_max.resize(NC_x);
@@ -187,7 +193,9 @@ CellVetoList::CellVetoList(double Lx, double Ly, double Lz, double valence, vect
 		}
 	}
 
-	for(int Ix=0;Ix<NC_x;Ix++)
+	double Qy_tot_temp=0;
+	#pragma omp parallel for reduction(+:Qy_tot_temp)
+	for(Ix=0;Ix<NC_x;Ix++){
 		for(int Iy=0;Iy<NC_y;Iy++)
 			for(int Iz=0;Iz<NC_z;Iz++){
 
@@ -209,13 +217,17 @@ CellVetoList::CellVetoList(double Lx, double Ly, double Lz, double valence, vect
 				zb1=(Iz-1)*dLz;
 				zb2=(Iz+1)*dLz;
 				qy_max[Ix][Iy][Iz]=get_max_q(xb1, xb2, yb1, yb2, zb1, zb2, *ES, 2);
-				Qy_tot+=qy_max[Ix][Iy][Iz];
+				Qy_tot_temp+=qy_max[Ix][Iy][Iz];
 				int temp;
 				int3 I;
 				I.x=Ix;I.y=Iy;I.z=Iz;
 				temp=Int3_To_Int(I);
 				qy_max_hist[temp]=qy_max[Ix][Iy][Iz];
 			}
+	}
+	Qy_tot=Qy_tot_temp;
+	cout<<"Qy_tot="<<Qy_tot<<endl;
+
 	FG_y=new Frequency_Generator(qy_max_hist);
 	//For z-axis
 	qz_max.resize(NC_x);
@@ -225,8 +237,9 @@ CellVetoList::CellVetoList(double Lx, double Ly, double Lz, double valence, vect
 			qz_max[Ix][Iy].resize(NC_z);
 		}
 	}
-
-	for(int Ix=0;Ix<NC_x;Ix++)
+	double Qz_tot_temp=0;
+	#pragma omp parallel for reduction(+:Qz_tot_temp)
+	for(Ix=0;Ix<NC_x;Ix++){
 		for(int Iy=0;Iy<NC_y;Iy++)
 			for(int Iz=0;Iz<NC_z;Iz++){
 
@@ -247,14 +260,20 @@ CellVetoList::CellVetoList(double Lx, double Ly, double Lz, double valence, vect
 				zb1=(Iz-1)*dLz;
 				zb2=(Iz+1)*dLz;
 				qz_max[Ix][Iy][Iz]=get_max_q(xb1, xb2, yb1, yb2, zb1, zb2, *ES, 3);
-				Qz_tot+=qz_max[Ix][Iy][Iz];
+				Qz_tot_temp+=qz_max[Ix][Iy][Iz];
 				int temp;
 				int3 I;
 				I.x=Ix;I.y=Iy;I.z=Iz;
 				temp=Int3_To_Int(I);
 				qz_max_hist[temp]=qz_max[Ix][Iy][Iz];
 			}
+	}
+	Qz_tot=Qz_tot_temp;
+	cout<<"Qz_tot="<<Qz_tot<<endl;
 	FG_z=new Frequency_Generator(qz_max_hist);
+	#ifdef DEBUG
+		calcu_min_q();
+	#endif
 }
 
 
@@ -281,160 +300,68 @@ void CellVetoList::Update(int2 const ids, double4 const NX) {
 	InWhichVetoCell[ids.x][ids.y]=IWC2;
 }
 
-void CellVetoList::check_print() {
-	//Step1: check cell and iwc
-	cout<<"Cell Veto List checking"<<endl;
-	int2 ids;
-	int3 IWC_mem,IWC_dyn;
-	double4 X;
-	for(int i=0;i<NC_x;i++)
-		for(int j=0;j<NC_y;j++)
-			for(int k=0;k<NC_z;k++)
-				for(int l=0;l<Veto_Cells[i][j][k].particle_list.size();l++){
-					ids=Veto_Cells[i][j][k].particle_list[l];
-					X=(*Types_pointer)[ids.x].X[ids.y];
-					IWC_mem=InWhichVetoCell[ids.x][ids.y];
-					IWC_dyn=In_Which_Veto_Cell(X);
-					if((IWC_mem.x!=i)||(IWC_mem.y!=j)||(IWC_mem.z!=k)){
-						cout<<"Error Cell information inconsistent"<<endl;
-						exit(0);
-					}
-					if((IWC_dyn.x!=i)||(IWC_dyn.y!=j)||(IWC_dyn.z!=k)){
-						cout<<"Warning Cell information inconsistent"<<endl;
-						cout<<"X=("<<X.x<<","<<X.y<<","<<X.z<<","<<X.w<<")"<<endl;
-						cout<<"correct cell position:"<<IWC_dyn.x<<' '<<IWC_dyn.y<<' '<<IWC_dyn.z<<')'<<endl;
-						cout<<"current cell position:"<<i<<' '<<j<<' '<<k<<endl<<endl;
-					}
-					if(l>=Num_Particle_Per_Cell){//check if it is in the exception particle list
-						int m;
-						for(m=0;m<Exception_Particle_List.size();m++)if((Exception_Particle_List[m].x==ids.x)&&(Exception_Particle_List[m].y==ids.y))break;
-						if(m==Exception_Particle_List.size()){
-							cout<<"Error: Exception Particle not in the list"<<endl;
-						}
-					}
-				}
-	for(int k=0;k<Exception_Particle_List.size();k++){
-		ids=Exception_Particle_List[k];
-		IWC_mem=InWhichVetoCell[ids.x][ids.y];
-		int l;
-		for(l=0;Veto_Cells[IWC_mem.x][IWC_mem.y][IWC_mem.z].particle_list.size();l++){
-			if((Veto_Cells[IWC_mem.x][IWC_mem.y][IWC_mem.z].particle_list[l].x==ids.x)&&(Veto_Cells[IWC_mem.x][IWC_mem.y][IWC_mem.z].particle_list[l].y==ids.y))break;
-		}
-		if(l<Num_Particle_Per_Cell){
-			cout<<"Error: Exception Particle incorrect"<<endl;
-		}
-	}
-	cout<<"# of Exception Particles: "<<Exception_Particle_List.size()<<endl;
-	cout<<"Q:"<<Qx_tot<<' '<<Qy_tot<<' '<<Qz_tot<<endl;
-	cout<<"Cell Veto List checking finished"<<endl;
-}
 
-void CellVetoList::check_rate() {
-	cout<<"checking rate"<<endl;
-
-	vector<vector<vector<double> > >qx_max_stat;
-	vector<vector<vector<double> > >qy_max_stat;
-	vector<vector<vector<double> > >qz_max_stat;
-	
-	qx_max_stat.resize(NC_x);
-	qy_max_stat.resize(NC_x);
-	qz_max_stat.resize(NC_x);
-	for(int Ix=0;Ix<NC_x;Ix++){
-		qx_max_stat[Ix].resize(NC_y);
-		qy_max_stat[Ix].resize(NC_y);
-		qz_max_stat[Ix].resize(NC_y);
-		for(int Iy=0;Iy<NC_y;Iy++){
-			qx_max_stat[Ix][Iy].resize(NC_z);
-			qy_max_stat[Ix][Iy].resize(NC_z);
-			qz_max_stat[Ix][Iy].resize(NC_z);
-			for(int Iz=0;Iz<NC_z;Iz++){
-				qx_max_stat[Ix][Iy][Iz]=0;
-				qy_max_stat[Ix][Iy][Iz]=0;
-				qz_max_stat[Ix][Iy][Iz]=0;
-			}
-		}
-	}
-\
-	double4 X,Y;
-	int3 IWC_X,IWC_Y,IWC_R;
-	int axis;
-	double q,q_bound;
-	X.w=1;Y.w=1;
-	for(int k=0;k<10000000;k++){
-		if(k%100000==0)cout<<k/100000<<"%"<<endl;
-		X.x=Uniform_Random()*Lx;
-		X.y=Uniform_Random()*Ly;
-		X.z=Uniform_Random()*Lz;
-		
-		Y.x=Uniform_Random()*Lx;
-		Y.y=Uniform_Random()*Ly;
-		Y.z=Uniform_Random()*Lz;
-
-		IWC_X=In_Which_Veto_Cell(X);
-		IWC_Y=In_Which_Veto_Cell(Y);
-
-		IWC_R.x=IWC_Y.x-IWC_X.x;
-		IWC_R.y=IWC_Y.y-IWC_X.y;
-		IWC_R.z=IWC_Y.z-IWC_X.z;
-
-		if(IWC_R.x<-NC_x/2)IWC_R.x+=NC_x;
-		if(IWC_R.x>+NC_x/2)IWC_R.x-=NC_x;
-
-		if(IWC_R.y<-NC_y/2)IWC_R.y+=NC_y;
-		if(IWC_R.y>+NC_y/2)IWC_R.y-=NC_y;
-
-		if(IWC_R.z<-NC_z/2)IWC_R.z+=NC_z;
-		if(IWC_R.z>+NC_z/2)IWC_R.z-=NC_z;
-
-		if((abs(IWC_R.x)<=1)&&(abs(IWC_R.y)<=1)&&(abs(IWC_R.z)<=1))continue;
-		if(IWC_R.x<0)IWC_R.x+=NC_x;
-		if(IWC_R.x>=NC_x)IWC_R.x-=NC_x;
-
-		if(IWC_R.y<0)IWC_R.y+=NC_y;
-		if(IWC_R.y>=NC_y)IWC_R.y-=NC_y;
-
-		if(IWC_R.z<0)IWC_R.z+=NC_z;
-		if(IWC_R.z>=NC_z)IWC_R.z-=NC_z;
-
-		axis=1;
-		q=ES->D_Potential(X,Y,axis);
-		if(q<0)q=0;
-		if(q>qx_max_stat[IWC_R.x][IWC_R.y][IWC_R.z])qx_max_stat[IWC_R.x][IWC_R.y][IWC_R.z]=q;
-		q_bound=qx_max[IWC_R.x][IWC_R.y][IWC_R.z];
-		if(q>q_bound){
-			cout<<q<<' '<<q_bound<<endl;
-			exit(0);
-		}
-
-		axis=2;
-		q=ES->D_Potential(X,Y,axis);
-		if(q<0)q=0;
-		if(q>qy_max_stat[IWC_R.x][IWC_R.y][IWC_R.z])qy_max_stat[IWC_R.x][IWC_R.y][IWC_R.z]=q;
-		q_bound=qy_max[IWC_R.x][IWC_R.y][IWC_R.z];
-		if(q>q_bound){
-			cout<<q<<' '<<q_bound<<endl;
-			exit(0);
-		}
-
-		axis=3;
-		q=ES->D_Potential(X,Y,axis);
-		if(q<0)q=0;
-		if(q>qz_max_stat[IWC_R.x][IWC_R.y][IWC_R.z])qz_max_stat[IWC_R.x][IWC_R.y][IWC_R.z]=q;
-		q_bound=qz_max[IWC_R.x][IWC_R.y][IWC_R.z];
-		if(q>q_bound){
-			cout<<q<<' '<<q_bound<<endl;
-			exit(0);
-		}
-	}
+void CellVetoList::update_max_num_per_cell(){
+	vector<int>Num_Exception;
+	int num;
+	int max_num=-1;
+	double S=0;
+	int tot_num=0;
 	for(int i=0;i<NC_x;i++)
 		for(int j=0;j<NC_y;j++)
 			for(int k=0;k<NC_z;k++){
-				cout<<i<<','<<j<<','<<k<<endl;
-				cout<<"qx"<<qx_max_stat[i][j][k]<<' '<<qx_max[i][j][k]<<endl;
-				cout<<"qy"<<qy_max_stat[i][j][k]<<' '<<qy_max[i][j][k]<<endl;
-				cout<<"qz"<<qz_max_stat[i][j][k]<<' '<<qz_max[i][j][k]<<endl;
-				cout<<endl;
+				num=Veto_Cells[i][j][k].particle_list.size();
+				if(num>max_num)max_num=num;
+				while(num>=Num_Exception.size())Num_Exception.push_back(0);
+				for(int l=0;l<=num;l++)Num_Exception[l]+=(num-l);
+				
+				if(num!=0)S+=-num*log(num);
+				tot_num+=num;
 			}
-	cout<<"checking rate finished"<<endl;
-	exit(0);
+	S=S/tot_num;//+log(tot_num);
+	cout<<"Homogeneity:"<<S<<endl;
+	int Old_Num_Particle_Per_Cell;
+	Old_Num_Particle_Per_Cell=Num_Particle_Per_Cell;
+	if(Num_Exception[max_num-1]<2)
+		Num_Particle_Per_Cell=max_num-1;
+	else
+		Num_Particle_Per_Cell=max_num;
+
+	//if(Num_Particle_Per_Cell==0)Num_Particle_Per_Cell=1;//For debug
+	cout<<"Change max number of particle per cell to "<<Num_Particle_Per_Cell<<endl;
+
+	if(Old_Num_Particle_Per_Cell<Num_Particle_Per_Cell){
+		int2 ids;
+		int3 IWC;
+		int m;
+		vector<int2>*particle_list_p;
+		for(int l=0;l<Exception_Particle_List.size();l++){
+			ids=Exception_Particle_List[l];
+			IWC=InWhichVetoCell[ids.x][ids.y];
+			particle_list_p=&Veto_Cells[IWC.x][IWC.y][IWC.z].particle_list;
+			for(m=0;m<particle_list_p->size();m++)if(((*particle_list_p)[m].x==ids.x)&&((*particle_list_p)[m].y==ids.y))break;
+			if(m<Num_Particle_Per_Cell){
+				//remove from Exception_Particle_List
+				Exception_Particle_List[l]=Exception_Particle_List[Exception_Particle_List.size()-1];
+				Exception_Particle_List.pop_back();
+				l--;
+			}
+		}
+	}else if(Old_Num_Particle_Per_Cell>Num_Particle_Per_Cell){
+		int2 ids;
+		vector<int2>*particle_list_p;
+
+		Exception_Particle_List.clear();
+		for(int i=0;i<NC_x;i++)
+			for(int j=0;j<NC_y;j++)
+				for(int k=0;k<NC_z;k++){
+					particle_list_p=&Veto_Cells[i][j][k].particle_list;
+					if(particle_list_p->size()<=Num_Particle_Per_Cell)continue;
+					for(int l=Num_Particle_Per_Cell;l<particle_list_p->size();l++){
+						ids=(*particle_list_p)[l];
+						Exception_Particle_List.push_back(ids);
+					}
+				}
+	}
+
 }

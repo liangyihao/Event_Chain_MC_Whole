@@ -5,6 +5,7 @@ This code is for Event Chain Monte Carlo for pairwise interacting many body syst
 */
 #include <random>
 #include <iostream>
+#include <limits>
 #include "Random_Number.hpp"
 using namespace std;
 mt19937*generator;
@@ -19,6 +20,7 @@ double Uniform_Random(){
 }
 
 double Exponential_Random(double rate){
+	if(rate==0)return (numeric_limits<double>::max());
     double r=Uniform_Random();
     return -log(1-r)/rate;
 }

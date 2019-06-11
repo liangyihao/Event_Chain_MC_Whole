@@ -233,7 +233,7 @@ void Monte_Carlo(double Stop_Clock,int axis) {
     int2 id_next_active_bead;
     bool go_ahead=true;
     while(go_ahead) {
-        //cout<<"Active: "<<Active_Bead.x<<" "<<Active_Bead.y<<endl;
+        //cout<<endl<<"Active: "<<Active_Bead.x<<" "<<Active_Bead.y<<endl;
         //cout<<Types[0].X[0].x<<' '<<Types[0].X[0].y<<' '<<Types[0].X[0].z<<endl;
         //cout<<Types[1].X[0].x<<' '<<Types[1].X[0].y<<' '<<Types[1].X[0].z<<endl<<endl;
         Get_Event(time,id_next_active_bead,axis);

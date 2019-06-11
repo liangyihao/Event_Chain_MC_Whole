@@ -15,6 +15,7 @@ This code is for Event Chain Monte Carlo for pairwise interacting many body syst
 #include "public.hpp"
 #include "Random_Number.hpp"
 #include "Ewald_Sum_Factor.hpp"
+#define DEBUG
 using namespace std;
 
 typedef struct Veto_Cell_Struct{
@@ -56,14 +57,30 @@ private:
 	Frequency_Generator*FG_z;//To assign pre-event to cell
 	Ewald_Sum*ES;//Ewald sum calculator
 	
+	#ifdef DEBUG
+	vector<vector<vector<double> > >qx_min;//for debug
+	vector<vector<vector<double> > >qy_min;//for debug
+	vector<vector<vector<double> > >qz_min;//for debug
+	void calcu_min_q();
+	#endif
+
 	int3 In_Which_Veto_Cell(double4 X){//Compute the cell ids of input coordinate X
 		int3 Id;
 		Id.x=X.x/dLx;
 		Id.y=X.y/dLy;
 		Id.z=X.z/dLz;
-		if(Id.x==NC_x)Id.x=0;
-		if(Id.y==NC_y)Id.y=0;
-		if(Id.z==NC_z)Id.z=0;
+		if(Id.x==NC_x){
+			Id.x=0;
+			//X.x-=Lx;
+		}
+		if(Id.y==NC_y){
+			Id.y=0;
+			//X.y-=Ly;
+		}
+		if(Id.z==NC_z){
+			Id.z=0;
+			//X.z-=Lz;
+		}
 		return Id;
 	}
 	int3 Int_To_Int3(int I){
@@ -91,9 +108,9 @@ public:
     CellVetoList(double Lx, double Ly, double Lz, double valence, vector<Bead_Type>*Types_pointer);
 	void Update(int2 const ids, double4 const NX);
 	void Get_Colomb_Event(int2 id_active_particle, int axis, double Bjerrum_Length, double&time, int2&id_next_active_bead);
+	void update_max_num_per_cell();
 	void check_print();
 	void check_rate();
-	//void Adjust();//If the number of exception particles is big enough, try to increase the maximum number of particles per cell.
 };
 
 
