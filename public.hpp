@@ -21,6 +21,10 @@ typedef struct{
     int x,y,z;
 }int3;
 
+typedef struct{
+    double Event_Time;
+    int2 Target_Bead;
+}TwoBody_Event;
 /*
 We classify beads into types.
 The data structure "Bead_Type" has all information of current bead type
@@ -40,13 +44,33 @@ typedef struct{
     //It is a list of special interactions for each bead
     //Interactions_with_Beads[i][..].x    the type-id of the bead who interact with bead i in the current bead type
     //Interactions_with_Beads[i][..].y    the secondary bead-id of the bead who interact with bead i in the current bead type
-    //Interactions_with_Beads[i][..].z    the interaction-id in the interaction list
+    //Interactions_with_Beads[i][..].z    interaction id in the Event_Time_Generator_List_For_Bonds list
 
-    vector<int2>Interactions_with_Types;//size=N
+    vector<int>Interactions_with_Types;//size=N
     //Interactions_with_Types[i] stores information of the type-type interaction the current bead type interact with
-    //Interactions_with_Types[i].x    target bead type type-id
-    //Interactions_with_Types[i].y    the interaction-id in the interaction list
+    //Interactions_with_Types[i] the short-range-interaction-id in the short range interaction server list
 }Bead_Type;
 
+class Parameter_List{
+    public:
+    double*data;
+    //data[0]: Lx
+    //data[1]: Ly
+    //data[2]: Lz
+    ///...
+    //When calling function for Event Time, just pass the address of data[0]
+    Parameter_List(double Lx,double Ly,double Lz) {
+        data=new double [8];
+        data[0]=Lx;
+        data[1]=Ly;
+        data[2]=Lz;
+    }
+};
+
+typedef struct{
+  int Command;//0:ECMC 1:Output
+  vector<double>Double_Para;
+  vector<int>Int_Para;
+}Instruction;
 
 #endif

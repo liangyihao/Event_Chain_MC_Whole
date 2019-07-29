@@ -78,7 +78,7 @@ Frequency_Generator::Frequency_Generator(vector<double>Frequency_List_Unnormaliz
         Bin.push_back(L[L.size()-1]);
         L.pop_back();
     }
-
+	/*
     cout<<"Frequency Generator constructed"<<endl;
     vector<double>Prob(Frequency_Hist.size(),0);
     for(int k=0;k<Bin.size();k++){
@@ -89,6 +89,7 @@ Frequency_Generator::Frequency_Generator(vector<double>Frequency_List_Unnormaliz
     cout<<endl<<"Expect Probability"<<endl;
     for(int k=0;k<Prob.size();k++)cout<<k<<" "<<Prob[k]/Bin.size()<<"(contructed)  "<<Frequency_Hist[k]<<"(Input)"<<endl;
     cout<<endl;
+    */
 }
 
 int Frequency_Generator::Gen(){

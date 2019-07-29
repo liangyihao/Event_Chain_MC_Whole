@@ -6,10 +6,15 @@ This code is for Event Chain Monte Carlo for pairwise interacting many body syst
 #include "manage.hpp"
 #include "basic.hpp"
 #include <iostream>
+#include "Input_File_Parser.hpp"
+#include "dcd_writer.hpp"
 #include "CellVetoList.hpp"
 #include <cmath>
 /*Used to manage systematic variables*/
 double Lx=10,Ly=10,Lz=10;//0<=x<Lx...
+double Bjerrum_Length=7.117;
+vector<Instruction>Instruction_list;
+int loop_times;
 
 vector<double>valence_of_type;
 vector<double>valence_list;//record all the non-zero valence of beads
@@ -117,4 +122,47 @@ void initialize_sys_charge(){
         temp=new CellVetoList(Lx,Ly,Lz,valence,(&Types));
         Cell_Veto_Lists.push_back(temp);
     }
+}
+
+void Run(char*InputFileName){
+    rand_init(1);
+    Input_File_Parser(InputFileName);
+    Hard_Repulsion_Checker();
+    initialize_sys_charge();
+    for(int l=0;l<Cell_Veto_Lists.size();l++){
+        Cell_Veto_Lists[l]->check_print();//For debug
+        Cell_Veto_Lists[l]->update_max_num_per_cell();
+        Cell_Veto_Lists[l]->check_print();//For debug
+    }
+    Output_DCD_init(InputFileName);
+    for(int l=0;l<loop_times;l++){
+        for(int k=0;k<Instruction_list.size();k++){
+            if(Instruction_list[k].Command==0){//Do ECMC
+                Monte_Carlo(Instruction_list[k].Double_Para[0],Instruction_list[k].Int_Para[0]);
+            }else if(Instruction_list[k].Command==1){//Do output
+                if(l%Instruction_list[k].Int_Para[1]==0)cout<<l<<endl;
+                if(l<Instruction_list[k].Int_Para[0])continue;
+                if(l%Instruction_list[k].Int_Para[1]==0){
+                    Output_DCD();
+                    next_input_file_writer(InputFileName);
+                }
+            }else if(Instruction_list[k].Command==2){//Do reconstruct of CellVeto List
+                if(l%Instruction_list[k].Int_Para[0]!=0)continue;
+                for(int zz=0;zz<Cell_Veto_Lists.size();zz++){
+                    Cell_Veto_Lists[zz]->Reconstruct_CellVeto_List(Instruction_list[k].Int_Para[1]);
+                    Cell_Veto_Lists[zz]->update_max_num_per_cell();
+                }            
+            }else if(Instruction_list[k].Command==3){//Do refresh of CellVeto List
+                if(l%Instruction_list[k].Int_Para[0]!=0)continue;
+                for(int zz=0;zz<Cell_Veto_Lists.size();zz++)Cell_Veto_Lists[zz]->update_max_num_per_cell();
+            }else if(Instruction_list[k].Command==4){//Do check of CellVeto List
+                if(l%Instruction_list[k].Int_Para[0]!=0)continue;
+                for(int zz=0;zz<Cell_Veto_Lists.size();zz++)Cell_Veto_Lists[zz]->check_print();
+            }else if(Instruction_list[k].Command==5){//Do compress the system
+                //Add code here
+            }
+        }
+    }
+    Output_DCD_Close();
+    next_input_file_writer(InputFileName);
 }

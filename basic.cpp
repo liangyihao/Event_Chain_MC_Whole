@@ -17,46 +17,12 @@ void Get_Event_BF(double&time, int2&id_next_active_bead, int axis);//FOR DEBUG
 //DEBUG///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 */
 vector<Bead_Type> Types;
-vector<double(*)(double4,double4,int,double*,double)> Event_Time_Generator_List;
-vector<Parameter_List> Param_Lists;
+vector<double(*)(double4,double4,int,double*,double)> Event_Time_Generator_List_For_Bonds;
+vector<Parameter_List> Param_Lists_For_Bonds;
 int2 Active_Bead;
-double MAX_SHORT_INTERACTION_RANGE=0;
 CellList* Global_Cell_List_Pointer;
+vector<Short_Range_Interaction_Between_Types*>Short_Range_Interaction_Between_Types_List;
 
-void Event_with_Cell(int axis, double&time, int2&id_veto_bead, int3 Cell_ID){
-    Bead_Type*Type1;
-    Bead_Type*Type2;
-    double4 X,Y;
-
-    double (*Gen)(double4,double4,int,double*,double);
-    double *Params;
-    Type1=&Types[Active_Bead.x];
-    X=Type1->X[Active_Bead.y];
-    vector<int>*Particle_List_Pointer;
-    int bead_id;
-    int target_type_id,interaction_id;
-    double t;
-    for(int z=0;z<Type1->Interactions_with_Types.size();z++){
-        target_type_id=Type1->Interactions_with_Types[z].x;
-        interaction_id=Type1->Interactions_with_Types[z].y;
-        Type2=&Types[target_type_id];
-        Gen=Event_Time_Generator_List[interaction_id];
-        Params=Param_Lists[interaction_id].data;
-        Particle_List_Pointer=Global_Cell_List_Pointer->Particle_List_In_Cell(Cell_ID,target_type_id);
-        for(int k=0;k<(*Particle_List_Pointer).size();k++) {
-            //cout<<"Tri"<<endl;
-            bead_id=(*Particle_List_Pointer)[k];
-            if(((Type1->index)==(Type2->index))&&(Active_Bead.y==bead_id)) continue;
-            Y=Type2->X[bead_id];
-            t=Gen(X,Y,axis,Params,time);
-            if(t<time){
-                time=t;
-                id_veto_bead.x=Type2->index;
-                id_veto_bead.y=bead_id;
-            }
-        }
-    }
-}
 
 void Get_Event(double&time, int2&id_next_active_bead, int axis) {
     //Get Event within time Lx if axis==1(or Ly if axis==2, or Lz if axis==3)
@@ -64,19 +30,19 @@ void Get_Event(double&time, int2&id_next_active_bead, int axis) {
     //Normally, time is the event time and id_next_active_bead is the id of next active bead
 
     Bead_Type*Type1;
-    double4 X,Y;
-    int2 NA;
-    NA=Active_Bead;
-    double T;
-    if(abs(axis)==1)T=2*Lx;
-    if(abs(axis)==2)T=2*Ly;
-    if(abs(axis)==3)T=2*Lz;
+    double4 X_Active_Bead,Y;
+
+    TwoBody_Event Event;
+    Event.Target_Bead=Active_Bead;
+    if(abs(axis)==1)Event.Event_Time=2*Lx;
+    if(abs(axis)==2)Event.Event_Time=2*Ly;
+    if(abs(axis)==3)Event.Event_Time=2*Lz;
+
 
     double (*Gen)(double4,double4,int,double*,double);
     double *Params;
     Type1=&Types[Active_Bead.x];
-    X=Type1->X[Active_Bead.y];
-
+    X_Active_Bead=Type1->X[Active_Bead.y];
 
     //Special bead-bead interactions
     int3 ids3;
@@ -84,137 +50,25 @@ void Get_Event(double&time, int2&id_next_active_bead, int axis) {
     for(int k=0;k<Type1->Interactions_with_Beads[Active_Bead.y].size();k++){
         ids3=Type1->Interactions_with_Beads[Active_Bead.y][k];
         Y=Types[ids3.x].X[ids3.y];
-        Gen=Event_Time_Generator_List[ids3.z];
-        Params=Param_Lists[ids3.z].data;
-        t=Gen(X,Y,axis,Params,T);
-        if(t<T){
-                T=t;
-                NA.x=ids3.x;
-                NA.y=ids3.y;
+        Gen=Event_Time_Generator_List_For_Bonds[ids3.z];
+        Params=Param_Lists_For_Bonds[ids3.z].data;
+        t=Gen(X_Active_Bead,Y,axis,Params,Event.Event_Time);
+        if(t<Event.Event_Time){
+                Event.Event_Time=t;
+                Event.Target_Bead.x=ids3.x;
+                Event.Target_Bead.y=ids3.y;
         }
     }
 
     //Type-Type interactions
-    int3 IWC;
-
-    IWC=Global_Cell_List_Pointer->In_Which_Cell(Active_Bead);
-    
-    //Run first layer
-    int3 Cell_ID;
-    for(Cell_ID.x=IWC.x-1;Cell_ID.x<=IWC.x+1;Cell_ID.x++)
-        for(Cell_ID.y=IWC.y-1;Cell_ID.y<=IWC.y+1;Cell_ID.y++)
-            for(Cell_ID.z=IWC.z-1;Cell_ID.z<=IWC.z+1;Cell_ID.z++){
-                Event_with_Cell(axis, T, NA, Cell_ID);
-            }
-
-    //Run additional layers, if needed
-    double Position_1D,Size_1D;
-    int N_Layers_1D;//Number of layers on selected dimension
-
-    int3 Cell_In_One_Layer[3][3];
-    int3 dC;
-    int sign;
-    sign=(axis>0)?1:-1;
-    if(abs(axis)==1) {
-        N_Layers_1D=Global_Cell_List_Pointer->NCell_x();
-        Position_1D=X.x;
-        Size_1D=Lx;
-        dC.x=sign;
-        dC.y=0;
-        dC.z=0;
-        for(int i=-1;i<=+1;i++)
-            for(int j=-1;j<=+1;j++) {
-                Cell_In_One_Layer[i+1][j+1].x=IWC.x+sign;
-                Cell_In_One_Layer[i+1][j+1].y=IWC.y+i;
-                Cell_In_One_Layer[i+1][j+1].z=IWC.z+j;
-            }
-    }
-    if(abs(axis)==2) {
-        N_Layers_1D=Global_Cell_List_Pointer->NCell_y();
-        Position_1D=X.y;
-        Size_1D=Ly;
-        dC.x=0;
-        dC.y=sign;
-        dC.z=0;
-        for(int i=-1;i<=+1;i++)
-            for(int j=-1;j<=+1;j++) {
-                Cell_In_One_Layer[i+1][j+1].x=IWC.x+i;
-                Cell_In_One_Layer[i+1][j+1].y=IWC.y+sign;
-                Cell_In_One_Layer[i+1][j+1].z=IWC.z+j;
-            }
-
-    }
-    if(abs(axis)==3) {
-        N_Layers_1D=Global_Cell_List_Pointer->NCell_z();
-        Position_1D=X.z;
-        Size_1D=Lz;
-        dC.x=0;
-        dC.y=0;
-        dC.z=sign;
-        for(int i=-1;i<=+1;i++)
-            for(int j=-1;j<=+1;j++) {
-                Cell_In_One_Layer[i+1][j+1].x=IWC.x+i;
-                Cell_In_One_Layer[i+1][j+1].y=IWC.y+j;
-                Cell_In_One_Layer[i+1][j+1].z=IWC.z+sign;
-            }
-    }
-
-    double target_position_1D;
-    int Ie,Is,dI;
-    int N_layers_Visited=3;
-    int N_layers_needed;
-    
-    target_position_1D=Position_1D+T*sign;
-    if(target_position_1D>Size_1D)target_position_1D-=Size_1D;
-    if(target_position_1D<0      )target_position_1D+=Size_1D;
-    Is=Position_1D/(Global_Cell_List_Pointer->Cell_size());
-    Ie=target_position_1D/(Global_Cell_List_Pointer->Cell_size());
-    if(Is==N_Layers_1D)Is--;
-    if(Ie==N_Layers_1D)Ie--;
-    dI=(Ie-Is)*sign;
-    if(dI>0){
-        N_layers_needed=dI+3;
-    }else if(dI<0){
-        N_layers_needed=min(N_Layers_1D,N_Layers_1D+3+dI);
-    }else {//case: Ie==Is
-        N_layers_needed=((T>Size_1D/2)?N_Layers_1D:3);
-    }
-    if(T>Size_1D)N_layers_needed=N_Layers_1D;
-    
-    
-    while(N_layers_needed>N_layers_Visited) {
-        for(int i=0;i<3;i++)
-            for(int j=0;j<3;j++) {
-                Cell_In_One_Layer[i][j].x+=dC.x;
-                Cell_In_One_Layer[i][j].y+=dC.y;
-                Cell_In_One_Layer[i][j].z+=dC.z;
-                Event_with_Cell(axis, T, NA, Cell_In_One_Layer[i][j]);
-            }
-        N_layers_Visited++;
-
-        target_position_1D=Position_1D+T*sign;
-        if(target_position_1D>Size_1D)target_position_1D-=Size_1D;
-        if(target_position_1D<0      )target_position_1D+=Size_1D;
-        Is=Position_1D/(Global_Cell_List_Pointer->Cell_size());
-        Ie=target_position_1D/(Global_Cell_List_Pointer->Cell_size());
-        if(Is==N_Layers_1D)Is--;
-        if(Ie==N_Layers_1D)Ie--;
-        dI=(Ie-Is)*sign;
-        if(dI>0){
-            N_layers_needed=dI+3;
-        }else if(dI<0){
-            N_layers_needed=min(N_Layers_1D,N_Layers_1D+3+dI);
-        }else {//case: Ie==Is
-            N_layers_needed=((T>Size_1D/2)?N_Layers_1D:3);
-        }
-        if(T>Size_1D)N_layers_needed=N_Layers_1D;
+    for(int k=0;k<Type1->Interactions_with_Types.size();k++){
+        Short_Range_Interaction_Between_Types_List[Type1->Interactions_with_Types[k]]->Get_Event(Event,Active_Bead,X_Active_Bead,axis);
     }
 
     //Coloumb interaction
-    for(int k=0;k<Cell_Veto_Lists.size();k++)Cell_Veto_Lists[k]->Get_Colomb_Event(Active_Bead,axis,7.117,T,NA);
-
-    time=T;
-    id_next_active_bead=NA;
+    for(int k=0;k<Cell_Veto_Lists.size();k++)Cell_Veto_Lists[k]->Get_Colomb_Event(Active_Bead,axis,Bjerrum_Length,Event.Event_Time,Event.Target_Bead);
+    time=Event.Event_Time;
+    id_next_active_bead=Event.Target_Bead;
 }
 
 
@@ -265,11 +119,32 @@ void Monte_Carlo(double Stop_Clock,int axis) {
                 exe_time=Stop_Clock-Clock;
         }
         
-        Global_Cell_List_Pointer->Move(Active_Bead, exe_time, axis);
+        //Global_Cell_List_Pointer->Move(Active_Bead, exe_time, axis);
+        double4 New_X;
+        New_X=Types[Active_Bead.x].X[Active_Bead.y];
+        if(abs(axis)==1){
+            New_X.x+=exe_time*(axis/abs(axis));
+            while(New_X.x>Lx)New_X.x-=Lx;
+            while(New_X.x<0 )New_X.x+=Lx;
+        }
+        if(abs(axis)==2){
+            New_X.y+=exe_time*(axis/abs(axis));
+            while(New_X.y>Ly)New_X.y-=Ly;
+            while(New_X.y<0 )New_X.y+=Ly;
+        }
+        if(abs(axis)==3){
+            New_X.z+=exe_time*(axis/abs(axis));
+            while(New_X.z>Lz)New_X.z-=Lz;
+            while(New_X.z<0 )New_X.z+=Lz;
+        }
+        for(int k=0;k<Types[Active_Bead.x].Interactions_with_Types.size();k++){
+            Short_Range_Interaction_Between_Types_List[Types[Active_Bead.x].Interactions_with_Types[k]]->Update(Active_Bead,New_X);
+        }
+        Types[Active_Bead.x].X[Active_Bead.y]=New_X;
 
         //!!!For all cell-veto list, update
-        NX=Types[Active_Bead.x].X[Active_Bead.y];
-        for(int k=0;k<Cell_Veto_Lists.size();k++)Cell_Veto_Lists[k]->Update(Active_Bead,NX);
+        //NX=Types[Active_Bead.x].X[Active_Bead.y];
+        for(int k=0;k<Cell_Veto_Lists.size();k++)Cell_Veto_Lists[k]->Update(Active_Bead,New_X);
 
         Clock+=exe_time;
         Active_Bead=id_next_active_bead;

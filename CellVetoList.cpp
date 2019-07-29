@@ -327,7 +327,7 @@ void CellVetoList::update_max_num_per_cell(){
 	else
 		Num_Particle_Per_Cell=max_num;
 
-	//if(Num_Particle_Per_Cell==0)Num_Particle_Per_Cell=1;//For debug
+	if(Num_Particle_Per_Cell==0)Num_Particle_Per_Cell=1;
 	cout<<"Change max number of particle per cell to "<<Num_Particle_Per_Cell<<endl;
 
 	if(Old_Num_Particle_Per_Cell<Num_Particle_Per_Cell){
@@ -364,4 +364,251 @@ void CellVetoList::update_max_num_per_cell(){
 				}
 	}
 
+}
+
+void CellVetoList::Reconstruct_CellVeto_List(int max_Npar_per_Cell){
+	cout<<"Reconstructing Cell-Veto List"<<endl;
+	vector<int>type_id_list;
+    
+	//Now generate grid
+	double dL;
+	dL=pow(Lx*Ly*Lz/NParticles,1.0/3.0);
+
+	vector<vector<vector<int> > >num_particles;
+	int max_num_cell;
+	do{
+		cout<<"Try dL="<<dL<<endl;
+		NC_x=(int)(Lx/dL);//for x>NC_x*dL, it is absorbed into last cell
+		NC_y=(int)(Ly/dL);//for y>NC_y*dL, it is absorbed into last cell
+		NC_z=(int)(Lz/dL);//for z>NC_z*dL, it is absorbed into last cell
+
+		dLx=Lx/NC_x;
+		dLy=Ly/NC_y;
+		dLz=Lz/NC_z;
+
+		max_num_cell=0;
+
+		num_particles.resize(NC_x);
+		for(int i=0;i<NC_x;i++){
+			num_particles[i].resize(NC_y);
+			for(int j=0;j<NC_y;j++){
+				num_particles[i][j].resize(NC_z);
+				for(int k=0;k<NC_z;k++)num_particles[i][j][k]=0;
+			}
+		}
+		
+		type_id_list.clear();
+	    for(int type_id=0;type_id<Types_pointer->size();type_id++){
+			if((*Types_pointer)[type_id].X.size()==0)continue;
+			if(abs((*Types_pointer)[type_id].X[0].w-valence)>EPSILON)continue;
+			type_id_list.push_back(type_id);
+			for(int bead_id=0;bead_id<(*Types_pointer)[type_id].X.size();bead_id++){
+					int Ix=(*Types_pointer)[type_id].X[bead_id].x/dLx;
+					int Iy=(*Types_pointer)[type_id].X[bead_id].y/dLy;
+					int Iz=(*Types_pointer)[type_id].X[bead_id].z/dLz;
+					num_particles[Ix][Iy][Iz]++;
+			}
+		}
+
+		for(int i=0;i<NC_x;i++)
+			for(int j=0;j<NC_y;j++)
+				for(int k=0;k<NC_z;k++){
+					if(num_particles[i][j][k]>max_num_cell)max_num_cell=num_particles[i][j][k];
+//					if(num_particles[i][j][k]>max_Npar_per_Cell)num_excessive_par+=(num_particles[i][j][k]-max_Npar_per_Cell);
+				}
+//		if((max_num_cell<=max_Npar_per_Cell)&&(num_excessive_par<2))break;
+		if(max_num_cell<=max_Npar_per_Cell)break;
+		dL/=pow((1.0*max_num_cell)/max_Npar_per_Cell,1.0/3);
+	}while(1);
+
+	if(NC_x<5)NC_x=5;
+	if(NC_y<5)NC_y=5;
+	if(NC_z<5)NC_z=5;
+
+	if(NC_x>20)NC_x=20;
+	if(NC_y>20)NC_y=20;
+	if(NC_z>20)NC_z=20;
+	cout<<"Change to "<<NC_x<<" by "<<NC_y<<" by "<<NC_z<<endl;
+	dLx=Lx/NC_x;
+	dLy=Ly/NC_y;
+	dLz=Lz/NC_z;
+
+	this->Num_Particle_Per_Cell=max_num_cell;
+
+	//Now construct Cell List
+	//vector<vector<int3> >InWhichCell;
+	//InWhichCell[type_id][bead_id] stores the in which cell each bead is
+	//vector<vector<vector<Cell> > >Cells;
+	//If there are more than Num_Particle_Per_Cell particles in a cell, the excessive particle should be put into Exception_Particle_List
+	//Veto_Cell Empty_Cell;
+	Veto_Cells.resize(NC_x);
+	for(int k=0;k<NC_x;k++){
+		Veto_Cells[k].resize(NC_y);
+		for(int l=0;l<NC_y;l++) {
+			Veto_Cells[k][l].resize(NC_z);
+			for(int m=0;m<NC_z;m++)Veto_Cells[k][l][m].clear();
+		}
+	}
+	Exception_Particle_List.clear();
+
+	int2 ids;
+	int3 IWC;
+	double4 X;
+	for(int k=0;k<type_id_list.size();k++){
+		int type_id=type_id_list[k];
+		for(int bead_id=0;bead_id<(*Types_pointer)[type_id].X.size();bead_id++) {
+			ids.x=type_id;
+			ids.y=bead_id;
+			X=(*Types_pointer)[type_id].X[bead_id];
+			IWC=In_Which_Veto_Cell(X);
+			InWhichVetoCell[type_id][bead_id]=IWC; 
+			Insert(ids, IWC);
+		}
+	}
+
+	//Now construct max event rate
+	qx_max.clear();
+	qy_max.clear();
+	qz_max.clear();
+	Qx_tot=0;
+	Qy_tot=0;
+	Qz_tot=0;
+	vector<double>qx_max_hist(NC_x*NC_y*NC_z);
+	vector<double>qy_max_hist(NC_x*NC_y*NC_z);
+	vector<double>qz_max_hist(NC_x*NC_y*NC_z);
+	//For x-axis
+	qx_max.resize(NC_x);
+	for(int Ix=0;Ix<NC_x;Ix++){
+		qx_max[Ix].resize(NC_y);
+		for(int Iy=0;Iy<NC_y;Iy++){
+			qx_max[Ix][Iy].resize(NC_z);
+		}
+	}
+	int Ix;
+	double Qx_tot_temp=0;
+	#pragma omp parallel for reduction (+:Qx_tot_temp)
+	for(Ix=0;Ix<NC_x;Ix++){
+		for(int Iy=0;Iy<NC_y;Iy++)
+			for(int Iz=0;Iz<NC_z;Iz++){
+
+				int Ixr=Ix,Iyr=Iy,Izr=Iz;
+				if(Ixr>NC_x/2)Ixr-=NC_x;
+				if(Iyr>NC_y/2)Iyr-=NC_y;
+				if(Izr>NC_z/2)Izr-=NC_z;
+				if((abs(Ixr)<=1)&&(abs(Iyr)<=1)&&(abs(Izr)<=1)){
+					qx_max[Ix][Iy][Iz]=0;
+					continue;
+				}
+
+				double xb1,xb2,yb1,yb2,zb1,zb2;
+				xb1=(Ix-1)*dLx;
+				xb2=(Ix+1)*dLx;
+				yb1=(Iy-1)*dLy;
+				yb2=(Iy+1)*dLy;
+				zb1=(Iz-1)*dLz;
+				zb2=(Iz+1)*dLz;
+				qx_max[Ix][Iy][Iz]=get_max_q(xb1, xb2, yb1, yb2, zb1, zb2, *ES, 1);
+				Qx_tot_temp+=qx_max[Ix][Iy][Iz];
+				int temp;
+				int3 I;
+				I.x=Ix;I.y=Iy;I.z=Iz;
+				temp=Int3_To_Int(I);
+				qx_max_hist[temp]=qx_max[Ix][Iy][Iz];
+			}
+	}
+	Qx_tot=Qx_tot_temp;
+	cout<<"Qx_tot="<<Qx_tot<<endl;
+	delete FG_x;
+	FG_x=new Frequency_Generator(qx_max_hist);
+	//For y-axis
+	qy_max.resize(NC_x);
+	for(int Ix=0;Ix<NC_x;Ix++){
+		qy_max[Ix].resize(NC_y);
+		for(int Iy=0;Iy<NC_y;Iy++){
+			qy_max[Ix][Iy].resize(NC_z);
+		}
+	}
+
+	double Qy_tot_temp=0;
+	#pragma omp parallel for reduction(+:Qy_tot_temp)
+	for(Ix=0;Ix<NC_x;Ix++){
+		for(int Iy=0;Iy<NC_y;Iy++)
+			for(int Iz=0;Iz<NC_z;Iz++){
+
+
+				int Ixr=Ix,Iyr=Iy,Izr=Iz;
+				if(Ixr>NC_x/2)Ixr-=NC_x;
+				if(Iyr>NC_y/2)Iyr-=NC_y;
+				if(Izr>NC_z/2)Izr-=NC_z;
+				if((abs(Ixr)<=1)&&(abs(Iyr)<=1)&&(abs(Izr)<=1)){
+					qy_max[Ix][Iy][Iz]=0;
+					continue;
+				}
+
+				double xb1,xb2,yb1,yb2,zb1,zb2;
+				xb1=(Ix-1)*dLx;
+				xb2=(Ix+1)*dLx;
+				yb1=(Iy-1)*dLy;
+				yb2=(Iy+1)*dLy;
+				zb1=(Iz-1)*dLz;
+				zb2=(Iz+1)*dLz;
+				qy_max[Ix][Iy][Iz]=get_max_q(xb1, xb2, yb1, yb2, zb1, zb2, *ES, 2);
+				Qy_tot_temp+=qy_max[Ix][Iy][Iz];
+				int temp;
+				int3 I;
+				I.x=Ix;I.y=Iy;I.z=Iz;
+				temp=Int3_To_Int(I);
+				qy_max_hist[temp]=qy_max[Ix][Iy][Iz];
+			}
+	}
+	Qy_tot=Qy_tot_temp;
+	cout<<"Qy_tot="<<Qy_tot<<endl;
+	delete FG_y;
+	FG_y=new Frequency_Generator(qy_max_hist);
+	//For z-axis
+	qz_max.resize(NC_x);
+	for(int Ix=0;Ix<NC_x;Ix++){
+		qz_max[Ix].resize(NC_y);
+		for(int Iy=0;Iy<NC_y;Iy++){
+			qz_max[Ix][Iy].resize(NC_z);
+		}
+	}
+	double Qz_tot_temp=0;
+	#pragma omp parallel for reduction(+:Qz_tot_temp)
+	for(Ix=0;Ix<NC_x;Ix++){
+		for(int Iy=0;Iy<NC_y;Iy++)
+			for(int Iz=0;Iz<NC_z;Iz++){
+
+				int Ixr=Ix,Iyr=Iy,Izr=Iz;
+				if(Ixr>NC_x/2)Ixr-=NC_x;
+				if(Iyr>NC_y/2)Iyr-=NC_y;
+				if(Izr>NC_z/2)Izr-=NC_z;
+				if((abs(Ixr)<=1)&&(abs(Iyr)<=1)&&(abs(Izr)<=1)){
+					qz_max[Ix][Iy][Iz]=0;
+					continue;
+				}
+
+				double xb1,xb2,yb1,yb2,zb1,zb2;
+				xb1=(Ix-1)*dLx;
+				xb2=(Ix+1)*dLx;
+				yb1=(Iy-1)*dLy;
+				yb2=(Iy+1)*dLy;
+				zb1=(Iz-1)*dLz;
+				zb2=(Iz+1)*dLz;
+				qz_max[Ix][Iy][Iz]=get_max_q(xb1, xb2, yb1, yb2, zb1, zb2, *ES, 3);
+				Qz_tot_temp+=qz_max[Ix][Iy][Iz];
+				int temp;
+				int3 I;
+				I.x=Ix;I.y=Iy;I.z=Iz;
+				temp=Int3_To_Int(I);
+				qz_max_hist[temp]=qz_max[Ix][Iy][Iz];
+			}
+	}
+	Qz_tot=Qz_tot_temp;
+	cout<<"Qz_tot="<<Qz_tot<<endl;
+	delete FG_z;
+	FG_z=new Frequency_Generator(qz_max_hist);
+	#ifdef DEBUG
+		calcu_min_q();
+	#endif
 }

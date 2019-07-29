@@ -23,6 +23,9 @@ typedef struct Veto_Cell_Struct{
 	Veto_Cell_Struct(){
 		particle_list.clear();
 	}
+	void clear(){
+		particle_list.clear();
+	}
 }Veto_Cell;
 
 class CellVetoList{
@@ -109,6 +112,7 @@ public:
 	void Update(int2 const ids, double4 const NX);
 	void Get_Colomb_Event(int2 id_active_particle, int axis, double Bjerrum_Length, double&time, int2&id_next_active_bead);
 	void update_max_num_per_cell();
+	void Reconstruct_CellVeto_List(int max_Npar_per_Cell);
 	void check_print();
 	void check_rate();
 };

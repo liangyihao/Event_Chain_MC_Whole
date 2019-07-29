@@ -21,4 +21,5 @@ int Create_Bead(int type_id,double4 x);//Create Bead, return its secondary id. I
 int Create_Charged_Type(double valence);//Create Charged Type, return it's id
 int Create_Charged_Bead(int type_id,double4 x);//Create Charged Bead, return its secondary id. If failed, return -1.
 void initialize_sys_charge();
+void Run(char*InputFileName);
 #endif

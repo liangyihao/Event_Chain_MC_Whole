@@ -1,0 +1,125 @@
+Input file format  AA.ECMC
+
+Lx 100
+Ly 100
+Lz 200
+BjerrumLength 7.117
+
+%Define Types
+Type A -Diameter 10%Define Type A, Diameter is a value to be exported into xml file, it does not influece the simulation and it is optional
+Type B -Diameter 6%Define Type B
+ChargedType Ca +1 -Diameter 6 %Define Charged Type Ca with valence +1
+ChargedType An -1 -Diameter 4 %Define Charged Type Ca with valence -1
+
+Positions
+A 12.0 32.0 98.3 % define a new bead of type A at (12.0,32.0,98.3)
+A 12.0 32.0 40.3 % define a new bead of type A at (12.0,32.0,40.3)
+B 13.0 35.0 80.3
+A 1.0 98.12 23.0
+...
+End-Positions
+
+%Define Interactions between types
+Interaction-Type-Type A A Hard 10
+Interaction-Type-Type A B Hard 8
+Interaction-Type-Type B B Hard 6
+Interaction-Type-Type Ca Ca Hard 6
+Interaction-Type-Type A Ca Hard 8
+Interaction-Type-Type B Ca Hard 6
+Interaction-Type-Type A B Gauss 10 5 10
+
+%%%%%%%%%%%%%%%Note: From here you cannot define particles again, parser would quit if you do that
+%Define Bond Types
+Bond-Type SP1 Spring 10.0 6.0
+Bond-Type FE1 FENE 10.0 1.0 1.0 2.0
+
+Bonds
+SP1 A 1 A 2
+SP1 A 2 A 3
+FE1 B 1 B 100
+......
+End-Bonds
+
+loop 1000000
+    Reconstruct-CellVeto-List 1000 2 %reconstruct cell-veto list each 1000 cycles, try to make the maximum number each cell less than 2
+    Refresh-CellVeto-maxnumpercell 10 % refresh max num per cell in CellVeto list per 10 cycles
+    Check-CellVeto-List 1000 %check correctness of cellveto list per 1000 cycles
+    ECMC +x 10.0
+    ECMC +y 10.0
+    ECMC +z 10.0
+    ECMC -x 10.0
+    ECMC -y 10.0
+    ECMC -z 10.0
+    Out 10000 1000 % Output configuration, start from 10000's iteration, output one per 1000 iteration
+End-loop
+
+
+
+
+
+
+
+
+Output file format AA.xml and AA.dcd
+AA.xml:(compatible with hoomd blue and vml)
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<hoomd_xml version="1.7">
+<configuration time_step="0" dimensions="3" natoms="286812" >
+<box lx="132.6000061035" ly="114.8349761963" lz="20" xy="-0.5773502588272" xz="0" yz="0"/>
+<position num="286812">
+-22.1000003815 -38.2783241272 0
+...
+64.438041687 -21.2604923248 8.7995595932
+</position>
+<image num="286812">
+0 0 0
+...
+0 0 0
+</image>
+<velocity num="286812">
+0 0 0
+...
+0 0 0
+</velocity>
+<acceleration num="286812">
+0 0 0
+...
+0 0 0
+</acceleration>
+<mass num="286812">
+1.28610002995
+...
+1
+4
+</mass>
+<charge num="286812">
+0
+...
+</charge>
+<diameter num="286812">
+0
+...
+0
+</diameter>
+<type num="286812">
+WB
+P
+S
+A
+B
+X
+Y
+FL
+Z
+...
+</type>
+<bond num="327852">
+S-A 1281 1282
+backbone 1282 1283
+C-FL 140716 140719
+NP-DNA 136700 140700
+</bond>
+</configuration>
+</hoomd_xml>
