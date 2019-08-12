@@ -31,7 +31,7 @@ typedef struct{
 }Bond;
 vector<Bond>Bonds_List;
 vector<int2>IO_Order_of_Beads;//Record the order of beads in the input file, output in this order
-
+vector<vector<int> >IO_ids;//IO_ids[typeid][beadid]show you the id in input file
 int Input_File_Parser(const char* fileName)
 {  
   ifstream ifs(fileName);
@@ -149,6 +149,7 @@ int Input_File_Parser(const char* fileName)
 
       if (word.find("Positions")==0) {
         IO_Order_of_Beads.clear();
+        IO_ids.resize(Types.size());for(int k=0;k<Types.size();k++)IO_ids[k].clear();
         while(1) {
           getline(ifs,s);line_num++;//when reading each line, ignore comment
           cout<<endl<<"Line"<<line_num<<':'<<s<<endl;
@@ -181,6 +182,7 @@ int Input_File_Parser(const char* fileName)
           wholeid_temp.x=typeid_temp;
           wholeid_temp.y=beadid_temp;
           IO_Order_of_Beads.push_back(wholeid_temp);
+          IO_ids[typeid_temp].push_back(IO_Order_of_Beads.size()-1);
         }
         continue;
       }
@@ -390,26 +392,44 @@ void xml_write(const char* fileName, const int timestep)
   ofs << "</position>"<<endl;
 
   ofs <<"<diameter num=\""<<N_Beads<<"\">"<<endl;//Output type of each bead
+  /*
   for(int type_id=0;type_id<Types.size();type_id++){
     for(int bead_id=0;bead_id<Types[type_id].X.size();bead_id++){
       ofs<<Type_Definition_List[type_id].diameter<<endl;
     }
+  }*/
+  for(int k=0;k<IO_Order_of_Beads.size();k++){
+    type_id=IO_Order_of_Beads[k].x;
+    bead_id=IO_Order_of_Beads[k].y;
+    ofs<<Type_Definition_List[type_id].diameter<<endl;
   }
   ofs << "</diameter>"<<endl;
 
   ofs <<"<type>"<<endl;//Output type of each bead
+  /*
   for(int type_id=0;type_id<Types.size();type_id++){
     for(int bead_id=0;bead_id<Types[type_id].X.size();bead_id++){
       ofs<<Type_Definition_List[type_id].name<<endl;
     }
+  }*/
+  for(int k=0;k<IO_Order_of_Beads.size();k++){
+    type_id=IO_Order_of_Beads[k].x;
+    bead_id=IO_Order_of_Beads[k].y;
+    ofs<<Type_Definition_List[type_id].name<<endl;
   }
   ofs << "</type>"<<endl;
   
   ofs << "<charge>"<<endl;//Output Charge of each bead
+  /*
   for(int type_id=0;type_id<Types.size();type_id++){
     for(int bead_id=0;bead_id<Types[type_id].X.size();bead_id++){
       ofs<<valence_of_type[type_id]<<endl;
     }
+  }*/
+  for(int k=0;k<IO_Order_of_Beads.size();k++){
+    type_id=IO_Order_of_Beads[k].x;
+    bead_id=IO_Order_of_Beads[k].y;
+    ofs<<valence_of_type[type_id]<<endl;
   }
   ofs << "</charge>"<<endl;
   
@@ -419,7 +439,7 @@ void xml_write(const char* fileName, const int timestep)
     int gid1,gid2;
     bid1=Bonds_List[k].bead1;
     bid2=Bonds_List[k].bead2;
-    
+    /*
     gid1=0;
     for(int l=0;l<bid1.x;l++)gid1+=Types[l].X.size();
     gid1+=bid1.y;
@@ -427,7 +447,9 @@ void xml_write(const char* fileName, const int timestep)
     gid2=0;
     for(int l=0;l<bid2.x;l++)gid2+=Types[l].X.size();
     gid2+=bid2.y;
-
+    */
+    gid1=IO_ids[bid1.x][bid1.y];
+    gid1=IO_ids[bid2.x][bid2.y];
     ofs<<Bond_Definition_List[Bonds_List[k].Bond_Def_Id].name<<' '<<gid1<<' '<<gid2<<endl;
   }
   ofs << "</bond>\n";
