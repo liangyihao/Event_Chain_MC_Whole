@@ -30,6 +30,7 @@ typedef struct{
     int2 bead1,bead2;
 }Bond;
 vector<Bond>Bonds_List;
+vector<int2>IO_Order_of_Beads;//Record the order of beads in the input file, output in this order
 
 int Input_File_Parser(const char* fileName)
 {  
@@ -147,6 +148,7 @@ int Input_File_Parser(const char* fileName)
       }
 
       if (word.find("Positions")==0) {
+        IO_Order_of_Beads.clear();
         while(1) {
           getline(ifs,s);line_num++;//when reading each line, ignore comment
           cout<<endl<<"Line"<<line_num<<':'<<s<<endl;
@@ -172,7 +174,13 @@ int Input_File_Parser(const char* fileName)
             cout<<"Error at line "<<line_num<<" No such type"<<endl;
             exit(0);
           }
-          if(Type_Definition_List[typeid_temp].ischarged==0)Create_Bead(typeid_temp,X);else Create_Charged_Bead(typeid_temp,X);
+
+          int beadid_temp;
+          if(Type_Definition_List[typeid_temp].ischarged==0)beadid_temp=Create_Bead(typeid_temp,X);else beadid_temp=Create_Charged_Bead(typeid_temp,X);
+          int2 wholeid_temp;
+          wholeid_temp.x=typeid_temp;
+          wholeid_temp.y=beadid_temp;
+          IO_Order_of_Beads.push_back(wholeid_temp);
         }
         continue;
       }
@@ -367,10 +375,17 @@ void xml_write(const char* fileName, const int timestep)
 
   ofs << "<position num=\"" << N_Beads << "\">\n";
   ofs.precision(15);//Output position
+  /*
   for(int type_id=0;type_id<Types.size();type_id++){
     for(int bead_id=0;bead_id<Types[type_id].X.size();bead_id++){
       ofs<<Types[type_id].X[bead_id].x<<' '<<Types[type_id].X[bead_id].y<<' '<<Types[type_id].X[bead_id].z<<endl;
     }
+  }*/
+  int type_id,bead_id;
+  for(int k=0;k<IO_Order_of_Beads.size();k++){
+    type_id=IO_Order_of_Beads[k].x;
+    bead_id=IO_Order_of_Beads[k].y;
+    ofs<<Types[type_id].X[bead_id].x<<' '<<Types[type_id].X[bead_id].y<<' '<<Types[type_id].X[bead_id].z<<endl;
   }
   ofs << "</position>"<<endl;
 

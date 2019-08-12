@@ -40,6 +40,7 @@
 #include "public.hpp"
 #include "basic.hpp"
 #include "manage.hpp"
+#include "Input_File_Parser.hpp"
 /***************************************************************************
  *cr
  *cr            (C) Copyright 1995-2016 The Board of Trustees of the
@@ -458,12 +459,21 @@ int Output_DCD_init(char*InputFileName){
 
 int Output_DCD() {
   int index=-1;
+  int type_id,bead_id;
+  /*
   for(int type_id=0;type_id<Types.size();type_id++) {
     for(int bead_id=0;bead_id<Types[type_id].X.size();bead_id++){
       index++;timestep.coords[index]=Types[type_id].X[bead_id].x;
       index++;timestep.coords[index]=Types[type_id].X[bead_id].y;
       index++;timestep.coords[index]=Types[type_id].X[bead_id].z;
     }
+  }*/
+  for(int k=0;k<IO_Order_of_Beads.size();k++){
+    type_id=IO_Order_of_Beads[k].x;
+    bead_id=IO_Order_of_Beads[k].y;
+    index++;timestep.coords[index]=Types[type_id].X[bead_id].x;
+    index++;timestep.coords[index]=Types[type_id].X[bead_id].y;
+    index++;timestep.coords[index]=Types[type_id].X[bead_id].z;
   }
   int res;
   res=write_timestep(dcd,&timestep);
