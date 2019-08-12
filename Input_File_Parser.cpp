@@ -449,7 +449,7 @@ void xml_write(const char* fileName, const int timestep)
     gid2+=bid2.y;
     */
     gid1=IO_ids[bid1.x][bid1.y];
-    gid1=IO_ids[bid2.x][bid2.y];
+    gid2=IO_ids[bid2.x][bid2.y];
     ofs<<Bond_Definition_List[Bonds_List[k].Bond_Def_Id].name<<' '<<gid1<<' '<<gid2<<endl;
   }
   ofs << "</bond>\n";
