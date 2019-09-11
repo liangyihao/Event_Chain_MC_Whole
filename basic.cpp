@@ -79,9 +79,19 @@ void Monte_Carlo(double Stop_Clock,int axis) {
     double temp;
     double4 NX;
     //Need to randomly choose an active particle, implement it later
-        Active_Bead.x=(int)(Uniform_Random()*Types.size());
-        Active_Bead.y=(int)(Uniform_Random()*Types[Active_Bead.x].X.size());
-        //cout<<"First Active bead: "<<Active_Bead.x<<" "<<Active_Bead.y<<endl;
+    int total_particle_number=0;
+    for(int i=0;i<Types.size();i++)total_particle_number+=Types[i].X.size();
+    int index=(int)(Uniform_Random()*total_particle_number);
+    for(int j=0;j<Types.size();j++){
+        if (index<Types[j].X.size()){
+            Active_Bead.x=j;
+            Active_Bead.y=index;
+        }
+        else{
+            index-=Types[j].X.size();
+        }
+    }
+    //cout<<"First Active bead: "<<Active_Bead.x<<" "<<Active_Bead.y<<endl;
 
     if((abs(axis)>3)||(axis==0)){cout<<"Error, axis id should be -3,-2,-1,1,2,3"<<endl;return;}
     int2 id_next_active_bead;
