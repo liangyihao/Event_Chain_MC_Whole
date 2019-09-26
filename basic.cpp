@@ -134,17 +134,17 @@ void Monte_Carlo(double Stop_Clock,int axis) {
         New_X=Types[Active_Bead.x].X[Active_Bead.y];
         if(abs(axis)==1){
             New_X.x+=exe_time*(axis/abs(axis));
-            while(New_X.x>Lx)New_X.x-=Lx;
+            while(New_X.x>=Lx)New_X.x-=Lx;
             while(New_X.x<0 )New_X.x+=Lx;
         }
         if(abs(axis)==2){
             New_X.y+=exe_time*(axis/abs(axis));
-            while(New_X.y>Ly)New_X.y-=Ly;
+            while(New_X.y>=Ly)New_X.y-=Ly;
             while(New_X.y<0 )New_X.y+=Ly;
         }
         if(abs(axis)==3){
             New_X.z+=exe_time*(axis/abs(axis));
-            while(New_X.z>Lz)New_X.z-=Lz;
+            while(New_X.z>=Lz)New_X.z-=Lz;
             while(New_X.z<0 )New_X.z+=Lz;
         }
         for(int k=0;k<Types[Active_Bead.x].Interactions_with_Types.size();k++){
