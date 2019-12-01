@@ -11,11 +11,7 @@ This code is for Event Chain Monte Carlo for pairwise interacting many body syst
 #include"Random_Number.hpp"
 #include<cmath>
 using namespace std;
-/*
-//DEBUG///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void Get_Event_BF(double&time, int2&id_next_active_bead, int axis);//FOR DEBUG
-//DEBUG///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-*/
+
 vector<Bead_Type> Types;
 vector<double(*)(double4,double4,int,double*,double)> Event_Time_Generator_List_For_Bonds;
 vector<Parameter_List> Param_Lists_For_Bonds;
@@ -23,8 +19,13 @@ int2 Active_Bead;
 CellList* Global_Cell_List_Pointer;
 vector<Short_Range_Interaction_Between_Types*>Short_Range_Interaction_Between_Types_List;
 
+//////////////////////For Pressure Computation////////////////////////////////////////////////////////////////////////////////////////
+double Pressure=0;//excessive pressure
+int Pressure_Count=0;
+double Event_Count_Per_Particle=0;
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Get_Event(double&time, int2&id_next_active_bead, int axis) {
+void Get_Event(double&time, int2&id_next_active_bead, int axis){
     //Get Event within time Lx if axis==1(or Ly if axis==2, or Lz if axis==3)
     //If event time out of bound L(=Lx or Ly or Lz),let time=2*L
     //Normally, time is the event time and id_next_active_bead is the id of next active bead
@@ -76,6 +77,8 @@ void Get_Event(double&time, int2&id_next_active_bead, int axis) {
 void Monte_Carlo(double Stop_Clock,int axis) {
     double Clock=0;
     double time,exe_time;
+    double Pressure_Chain=0;
+    int Event_Count=0;
     double temp;
     double4 NX;
     //Need to randomly choose an active particle, implement it later
@@ -96,29 +99,9 @@ void Monte_Carlo(double Stop_Clock,int axis) {
     if((abs(axis)>3)||(axis==0)){cout<<"Error, axis id should be -3,-2,-1,1,2,3"<<endl;return;}
     int2 id_next_active_bead;
     bool go_ahead=true;
+    int sign=axis/abs(axis);
     while(go_ahead) {
-        //cout<<endl<<"Active: "<<Active_Bead.x<<" "<<Active_Bead.y<<endl;
-        //cout<<Types[0].X[0].x<<' '<<Types[0].X[0].y<<' '<<Types[0].X[0].z<<endl;
-        //cout<<Types[1].X[0].x<<' '<<Types[1].X[0].y<<' '<<Types[1].X[0].z<<endl<<endl;
         Get_Event(time,id_next_active_bead,axis);
-/*
-//DEBUG//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        double time2;int2 id_next_active_bead2;//DEBUG
-        Get_Event_BF(time2,id_next_active_bead2,axis);//DEBUG
-        if(abs(time-time2)>0.000001){
-            cout<<"Wrong in event time : Cell List::"<<time<<" Real::"<<time2<<endl;
-            cout<<"Current Active::"<<Active_Bead.x<<' '<<Active_Bead.y<<endl;
-            cout<<"Next Active(cell list)::"<<id_next_active_bead.x<<' '<<id_next_active_bead.y<<endl;
-            cout<<"Next Active(real     )::"<<id_next_active_bead2.x<<' '<<id_next_active_bead2.y<<endl;
-            Global_Cell_List_Pointer->print();
-            cout<<"Direction: "<<axis<<endl;
-            exit(0);
-        }//DEBUG
-        if(id_next_active_bead.x!=id_next_active_bead2.x){cout<<"Wrong in next bead"<<endl;exit(0);}//DEBUG
-        if(id_next_active_bead.y!=id_next_active_bead2.y){cout<<"Wrong in next bead"<<endl;exit(0);}//DEBUG
-//DEBUG//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-*/
-        //cout<<"Direction:"<<axis<<" Clock:"<<Clock<<"Current active bead: "<<Active_Bead.x<<','<<Active_Bead.y<<" time:"<<time<<endl;
         
         if(abs(axis)==1)exe_time=min(Lx,time);//axis==1: on +x direction, axis==-1: on -x direction
         if(abs(axis)==2)exe_time=min(Ly,time);//axis==2: on +y direction, axis==-2: on -y direction
@@ -127,23 +110,46 @@ void Monte_Carlo(double Stop_Clock,int axis) {
         if(Clock+exe_time>=Stop_Clock) {
                 go_ahead=false;
                 exe_time=Stop_Clock-Clock;
+        }else if((Active_Bead.x!=id_next_active_bead.x)||(Active_Bead.y!=id_next_active_bead.y)){
+            //compute pressure contribution
+            double dx_p;
+            if(abs(axis)==1){
+                dx_p=Types[id_next_active_bead.x].X[id_next_active_bead.y].x - Types[Active_Bead.x].X[Active_Bead.y].x-exe_time*sign;
+                while(dx_p>+Lx/2)dx_p-=Lx;
+                while(dx_p<-Lx/2)dx_p+=Lx;
+                dx_p*=sign;
+            }
+            if(abs(axis)==2){
+                dx_p=Types[id_next_active_bead.x].X[id_next_active_bead.y].y - Types[Active_Bead.x].X[Active_Bead.y].y-exe_time*sign;
+                while(dx_p>+Ly/2)dx_p-=Ly;
+                while(dx_p<-Ly/2)dx_p+=Ly;
+                dx_p*=sign;
+            }
+            if(abs(axis)==3){
+                dx_p=Types[id_next_active_bead.x].X[id_next_active_bead.y].z - Types[Active_Bead.x].X[Active_Bead.y].z-exe_time*sign;
+                while(dx_p>+Lz/2)dx_p-=Lz;
+                while(dx_p<-Lz/2)dx_p+=Lz;
+                dx_p*=sign;
+            }
+            Pressure_Chain+=dx_p;
+            Event_Count++;
         }
         
         //Global_Cell_List_Pointer->Move(Active_Bead, exe_time, axis);
         double4 New_X;
         New_X=Types[Active_Bead.x].X[Active_Bead.y];
         if(abs(axis)==1){
-            New_X.x+=exe_time*(axis/abs(axis));
+            New_X.x+=exe_time*sign;
             while(New_X.x>=Lx)New_X.x-=Lx;
             while(New_X.x<0 )New_X.x+=Lx;
         }
         if(abs(axis)==2){
-            New_X.y+=exe_time*(axis/abs(axis));
+            New_X.y+=exe_time*sign;
             while(New_X.y>=Ly)New_X.y-=Ly;
             while(New_X.y<0 )New_X.y+=Ly;
         }
         if(abs(axis)==3){
-            New_X.z+=exe_time*(axis/abs(axis));
+            New_X.z+=exe_time*sign;
             while(New_X.z>=Lz)New_X.z-=Lz;
             while(New_X.z<0 )New_X.z+=Lz;
         }
@@ -159,4 +165,10 @@ void Monte_Carlo(double Stop_Clock,int axis) {
         Clock+=exe_time;
         Active_Bead=id_next_active_bead;
     }
+    Pressure_Chain/=Stop_Clock;
+    Pressure+=Pressure_Chain;
+    Pressure_Count++;
+    int N_tot=0;
+    for(int k=0;k<Types.size();k++)N_tot+=Types[k].X.size();
+    Event_Count_Per_Particle+=((double)Event_Count)/N_tot;
 }

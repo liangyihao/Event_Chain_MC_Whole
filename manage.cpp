@@ -15,7 +15,9 @@ double Lx=10,Ly=10,Lz=10;//0<=x<Lx...
 double Bjerrum_Length=7.117;
 vector<Instruction>Instruction_list;
 int loop_times;
-
+extern double Pressure;//excessive pressure
+extern int Pressure_Count;
+extern double Event_Count_Per_Particle;
 vector<double>valence_of_type;
 vector<double>valence_list;//record all the non-zero valence of beads
 vector<CellVetoList*> Cell_Veto_Lists;//for all valences, you need to create a Cell-Veto List
@@ -140,7 +142,13 @@ void Run(char*InputFileName){
             if(Instruction_list[k].Command==0){//Do ECMC
                 Monte_Carlo(Instruction_list[k].Double_Para[0],Instruction_list[k].Int_Para[0]);
             }else if(Instruction_list[k].Command==1){//Do output
-                if(l%Instruction_list[k].Int_Para[1]==0)cout<<l<<endl;
+                if(l%Instruction_list[k].Int_Para[1]==0){
+                    cout<<l<<endl;
+                    cout<<"Pressure factor(instant) "<<1+Pressure/Pressure_Count<<endl;
+                    Pressure=0;
+                    Pressure_Count=0;
+                    cout<<"# of Events Per Particle: "<<Event_Count_Per_Particle<<endl;
+                }
                 if(l<Instruction_list[k].Int_Para[0])continue;
                 if(l%Instruction_list[k].Int_Para[1]==0){
                     Output_DCD();
